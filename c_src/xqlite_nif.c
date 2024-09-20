@@ -28,7 +28,6 @@ typedef struct db
 {
     sqlite3 *db;
 } db_t;
-
 typedef struct stmt
 {
     sqlite3_stmt *stmt;
@@ -444,6 +443,25 @@ xqlite_finalize(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     return am_ok;
 }
 
+static ERL_NIF_TERM
+xqlite_interrupt(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(env);
+
+    if (argc != 1)
+        return enif_make_badarg(env);
+
+    db_t *db;
+    if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
+        return enif_make_badarg(env);
+
+    int rc = sqlite3_interrupt(db->db);
+    if (rc != SQLITE_OK)
+        return raise_sqlite3_error(env, rc, db->db);
+
+    return am_ok;
+}
+
 static void
 db_type_destructor(ErlNifEnv *env, void *arg)
 {
@@ -522,6 +540,14 @@ static ErlNifFunc nif_funcs[] = {
     {"step_nif", 2, xqlite_step},
     {"dirty_io_step_nif", 3, xqlite_multi_step, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"step_nif", 3, xqlite_multi_step},
+    {"dirty_io_interrupt_nif", 1, xqlite_interrupt, ERL_NIF_DIRTY_JOB_IO_BOUND},
+    {"interrupt_nif", 1, xqlite_interrupt},
+    // insert_all_nif
+    // dirty_io_insert_all_nif
+    // fetch_all_nif
+    // dirty_io_fetch_all_nif
+    // bind_all_nif
+    // dirty_cpu_bind_all_nil
 };
 
 ERL_NIF_INIT(Elixir.XQLite, nif_funcs, on_load, NULL, NULL, on_unload)

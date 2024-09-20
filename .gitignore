@@ -24,3 +24,8 @@ xqlite-*.tar
 
 # Temporary files, for example, from tests.
 /tmp/
+
+# Ignore SQLite3 database files.
+*.db
+*.db-wal
+*.db-shm

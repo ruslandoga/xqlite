@@ -3,8 +3,8 @@ defmodule XQLite do
 
   @type db :: reference
   @type stmt :: reference
-  @type param :: binary | number | boolean | nil
-  @type row :: [binary | number | nil]
+  @type value :: binary | number | nil
+  @type row :: [value]
 
   open_flags = [
     readonly: 0x00000001,
@@ -80,10 +80,10 @@ defmodule XQLite do
   @spec prepare(db, binary, [prepare_flag]) :: stmt
   def prepare(db, sql, flags), do: dirty_cpu_prepare_nif(db, sql, bor_prepare_flags(flags))
 
-  @spec bind_all(stmt, [param]) :: :ok
+  @spec bind_all(stmt, [value]) :: :ok
   def bind_all(stmt, values), do: dirty_cpu_bind_all_nif(stmt, values)
 
-  @spec unsafe_bind_all(stmt, [param]) :: :ok
+  @spec unsafe_bind_all(stmt, [value]) :: :ok
   def unsafe_bind_all(stmt, values), do: bind_all_nif(stmt, values)
 
   @spec bind_text(stmt, non_neg_integer, binary) :: :ok
@@ -119,6 +119,24 @@ defmodule XQLite do
   @spec unsafe_step(db, stmt, non_neg_integer) :: {:rows | :done, [row]}
   def unsafe_step(db, stmt, count), do: step_nif(db, stmt, count)
 
+  @spec interrupt(db) :: :ok
+  def interrupt(db), do: dirty_io_interrupt_nif(db)
+
+  @spec unsafe_interrupt(db) :: :ok
+  def unsafe_interrupt(db), do: interrupt_nif(db)
+
+  @spec insert_all(db, stmt, [row]) :: :ok
+  def insert_all(db, stmt, rows), do: dirty_io_insert_all_nif(db, stmt, rows)
+
+  @spec unsafe_insert_all(db, stmt, [row]) :: :ok
+  def unsafe_insert_all(db, stmt, rows), do: insert_all_nif(db, stmt, rows)
+
+  @spec fetch_all(db, stmt) :: [row]
+  def fetch_all(db, stmt), do: dirty_io_fetch_all_nif(db, stmt)
+
+  @spec unsafe_fetch_all(db, stmt) :: [row]
+  def unsafe_fetch_all(db, stmt), do: fetch_all_nif(db, stmt)
+
   @compile {:autoload, false}
   @on_load {:load_nif, 0}
 
@@ -144,4 +162,10 @@ defmodule XQLite do
   defp step_nif(_db, _stmt), do: :erlang.nif_error(:undef)
   defp dirty_io_step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
   defp step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
+  defp interrupt_nif(_db), do: :erlang.nif_error(:undef)
+  defp dirty_io_interrupt_nif(_db), do: :erlang.nif_error(:undef)
+  defp insert_all_nif(_db, _stmt, _rows), do: :erlang.nif_error(:undef)
+  defp dirty_io_insert_all_nif(_db, _stmt, _rows), do: :erlang.nif_error(:undef)
+  defp fetch_all_nif(_db, _stmt), do: :erlang.nif_error(:undef)
+  defp dirty_io_fetch_all_nif(_db, _stmt), do: :erlang.nif_error(:undef)
 end
