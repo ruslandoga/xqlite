@@ -54,6 +54,7 @@ make_binary(ErlNifEnv *env, const void *bytes, unsigned int size)
     return term;
 }
 
+// TODO just return rc, and let caller handle error, export the necessary nifs
 static ERL_NIF_TERM
 raise_sqlite3_error(ErlNifEnv *env, int rc, sqlite3 *db)
 {
@@ -62,11 +63,10 @@ raise_sqlite3_error(ErlNifEnv *env, int rc, sqlite3 *db)
     if (!msg)
         msg = sqlite3_errstr(rc);
 
-    return enif_raise_exception(env,
-                                enif_make_tuple3(env,
-                                                 am_error,
-                                                 enif_make_int64(env, rc),
-                                                 enif_make_string(env, msg, ERL_NIF_UTF8)));
+    ERL_NIF_TERM code = enif_make_int64(env, rc);
+    ERL_NIF_TERM reason = enif_make_string(env, msg, ERL_NIF_UTF8);
+    ERL_NIF_TERM error = enif_make_tuple3(env, am_error, code, reason);
+    return enif_raise_exception(env, error);
 }
 
 static ERL_NIF_TERM
@@ -91,11 +91,10 @@ xqlite_open(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (rc != SQLITE_OK)
     {
         const char *msg = sqlite3_errstr(rc);
-        return enif_raise_exception(env,
-                                    enif_make_tuple3(env,
-                                                     am_error,
-                                                     enif_make_int64(env, rc),
-                                                     enif_make_string(env, msg, ERL_NIF_UTF8)));
+        ERL_NIF_TERM code = enif_make_int64(env, rc);
+        ERL_NIF_TERM reason = enif_make_string(env, msg, ERL_NIF_UTF8);
+        ERL_NIF_TERM error = enif_make_tuple3(env, am_error, code, reason);
+        return enif_raise_exception(env, error);
     }
 
     db_t *db_resource;
@@ -188,6 +187,19 @@ xqlite_prepare(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     return result;
 }
 
+static int
+bind_text(ErlNifEnv *env, sqlite3_stmt *stmt, unsigned int idx, ERL_NIF_TERM param)
+{
+    if (enif_is_identical(param, am_nil) == 1)
+        return sqlite3_bind_null(stmt, idx);
+
+    ErlNifBinary text;
+    if (enif_inspect_binary(env, param, &text))
+        return sqlite3_bind_text(stmt, idx, (char *)text.data, text.size, SQLITE_TRANSIENT);
+
+    return -1;
+}
+
 static ERL_NIF_TERM
 xqlite_bind_text(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
@@ -201,22 +213,35 @@ xqlite_bind_text(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         return enif_make_badarg(env);
 
     stmt_t *stmt;
-    if (!enif_get_resource(env, argv[0], stmt_type, (void **)&stmt))
+    if (!enif_get_resource(env, argv[1], stmt_type, (void **)&stmt))
         return enif_make_badarg(env);
 
-    unsigned int index;
-    if (!enif_get_uint(env, argv[0], &index))
+    unsigned int idx;
+    if (!enif_get_uint(env, argv[2], &idx))
         return enif_make_badarg(env);
 
-    ErlNifBinary text;
-    if (!enif_inspect_binary(env, argv[1], &text))
+    int rc = bind_text(env, stmt->stmt, idx, argv[3]);
+
+    if (rc == -1)
         return enif_make_badarg(env);
 
-    int rc = sqlite3_bind_text(stmt->stmt, index, (char *)text.data, text.size, SQLITE_TRANSIENT);
     if (rc != SQLITE_OK)
         return raise_sqlite3_error(env, rc, db->db);
 
     return am_ok;
+}
+
+static int
+bind_blob(ErlNifEnv *env, sqlite3_stmt *stmt, unsigned int idx, ERL_NIF_TERM param)
+{
+    if (enif_is_identical(param, am_nil) == 1)
+        return sqlite3_bind_null(stmt, idx);
+
+    ErlNifBinary blob;
+    if (enif_inspect_binary(env, param, &blob))
+        return sqlite3_bind_blob(stmt, idx, (char *)blob.data, blob.size, SQLITE_TRANSIENT);
+
+    return -1;
 }
 
 static ERL_NIF_TERM
@@ -232,22 +257,52 @@ xqlite_bind_blob(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         return enif_make_badarg(env);
 
     stmt_t *stmt;
-    if (!enif_get_resource(env, argv[0], stmt_type, (void **)&stmt))
+    if (!enif_get_resource(env, argv[1], stmt_type, (void **)&stmt))
         return enif_make_badarg(env);
 
-    unsigned int index;
-    if (!enif_get_uint(env, argv[0], &index))
+    unsigned int idx;
+    if (!enif_get_uint(env, argv[2], &idx))
         return enif_make_badarg(env);
 
-    ErlNifBinary blob;
-    if (!enif_inspect_binary(env, argv[1], &blob))
+    int rc = bind_blob(env, stmt->stmt, idx, argv[3]);
+
+    if (rc == -1)
         return enif_make_badarg(env);
 
-    int rc = sqlite3_bind_blob(stmt->stmt, index, blob.data, blob.size, SQLITE_TRANSIENT);
     if (rc != SQLITE_OK)
         return raise_sqlite3_error(env, rc, db->db);
 
     return am_ok;
+}
+
+static int
+bind_integer(ErlNifEnv *env, sqlite3_stmt *stmt, unsigned int idx, ERL_NIF_TERM param)
+{
+    if (enif_is_identical(param, am_nil) == 1)
+        return sqlite3_bind_null(stmt, idx);
+
+    int i32;
+    if (enif_get_int(env, param, &i32))
+        return sqlite3_bind_int(stmt, idx, i32);
+
+    ErlNifSInt64 i64;
+    if (enif_get_int64(env, param, &i64))
+        return sqlite3_bind_int64(stmt, idx, i64);
+
+    return -1;
+}
+
+static int
+bind_real(ErlNifEnv *env, sqlite3_stmt *stmt, unsigned int idx, ERL_NIF_TERM param)
+{
+    if (enif_is_identical(param, am_nil) == 1)
+        return sqlite3_bind_null(stmt, idx);
+
+    double f64;
+    if (enif_get_double(env, param, &f64))
+        return sqlite3_bind_double(stmt, idx, f64);
+
+    return -1;
 }
 
 static ERL_NIF_TERM
@@ -266,25 +321,17 @@ xqlite_bind_number(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_get_resource(env, argv[1], stmt_type, (void **)&stmt))
         return enif_make_badarg(env);
 
-    unsigned int index;
-    if (!enif_get_uint(env, argv[2], &index))
+    unsigned int idx;
+    if (!enif_get_uint(env, argv[2], &idx))
         return enif_make_badarg(env);
 
-    int rc;
+    ERL_NIF_TERM param = argv[3];
+    int rc = bind_integer(env, stmt->stmt, idx, param);
 
-    int i32;
-    if (enif_get_int(env, argv[3], &i32))
-        rc = sqlite3_bind_int(stmt->stmt, index, i32);
+    if (rc == -1)
+        rc = bind_real(env, stmt->stmt, idx, param);
 
-    ErlNifSInt64 i64;
-    if (enif_get_int64(env, argv[3], &i64))
-        rc = sqlite3_bind_int64(stmt->stmt, index, i64);
-
-    double f64;
-    if (enif_get_double(env, argv[3], &f64))
-        rc = sqlite3_bind_double(stmt->stmt, index, f64);
-
-    if (!rc)
+    if (rc == -1)
         return enif_make_badarg(env);
 
     if (rc != SQLITE_OK)
@@ -309,11 +356,11 @@ xqlite_bind_null(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_get_resource(env, argv[1], stmt_type, (void **)&stmt))
         return enif_make_badarg(env);
 
-    unsigned int index;
-    if (!enif_get_uint(env, argv[2], &index))
+    unsigned int idx;
+    if (!enif_get_uint(env, argv[2], &idx))
         return enif_make_badarg(env);
 
-    int rc = sqlite3_bind_null(stmt->stmt, index);
+    int rc = sqlite3_bind_null(stmt->stmt, idx);
 
     if (rc != SQLITE_OK)
         return raise_sqlite3_error(env, rc, db->db);
@@ -322,30 +369,33 @@ xqlite_bind_null(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-make_cell(ErlNifEnv *env, sqlite3_stmt *stmt, unsigned int i)
+make_cell(ErlNifEnv *env, sqlite3_stmt *stmt, unsigned int idx)
 {
-    switch (sqlite3_column_type(stmt, i))
+    switch (sqlite3_column_type(stmt, idx))
     {
     case SQLITE_INTEGER:
-        return enif_make_int64(env, sqlite3_column_int64(stmt, i));
+        // TODO maybe use enif_make_int if possible?
+        return enif_make_int64(env, sqlite3_column_int64(stmt, idx));
 
     case SQLITE_FLOAT:
-        return enif_make_double(env, sqlite3_column_double(stmt, i));
+        return enif_make_double(env, sqlite3_column_double(stmt, idx));
+
+    case SQLITE_TEXT:
+        return make_binary(env, sqlite3_column_text(stmt, idx), sqlite3_column_bytes(stmt, idx));
+
+    case SQLITE_BLOB:
+        return make_binary(env, sqlite3_column_blob(stmt, idx), sqlite3_column_bytes(stmt, idx));
 
     case SQLITE_NULL:
         return am_nil;
 
-    case SQLITE_BLOB:
-        return make_binary(env, sqlite3_column_blob(stmt, i), sqlite3_column_bytes(stmt, i));
-
-    case SQLITE_TEXT:
-        return make_binary(env, sqlite3_column_text(stmt, i), sqlite3_column_bytes(stmt, i));
-    }
-
     // TODO
-    return enif_raise_exception(env, enif_make_string(env, "unknown column type", ERL_NIF_LATIN1));
+    default:
+        return am_nil;
+    }
 }
 
+// TODO can make list of cells in one go?
 static ERL_NIF_TERM
 make_row(ErlNifEnv *env, sqlite3_stmt *stmt)
 {
@@ -460,6 +510,133 @@ xqlite_finalize(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     return am_ok;
 }
 
+static ERL_NIF_TERM
+xqlite_insert_all(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(env);
+
+    if (argc != 2)
+        return enif_make_badarg(env);
+
+    db_t *db;
+    if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
+        return enif_make_badarg(env);
+
+    stmt_t *stmt;
+    if (!enif_get_resource(env, argv[1], stmt_type, (void **)&stmt))
+        return enif_make_badarg(env);
+
+    int stmt_param_count = (unsigned int)sqlite3_bind_parameter_count(stmt->stmt);
+    int types_array[stmt_param_count];
+
+    ERL_NIF_TERM types = argv[2];
+    ERL_NIF_TERM rows = argv[3];
+    ERL_NIF_TERM head, tail;
+
+    // process types
+    for (unsigned int i = 0; i < stmt_param_count; i++)
+    {
+        if (!enif_get_list_cell(env, types, &head, &tail))
+            return enif_make_badarg(env);
+
+        int type;
+        if (!enif_get_int(env, head, &type))
+            return enif_make_badarg(env);
+
+        types_array[i] = type;
+        types = tail;
+    }
+
+    int rc;
+
+    // process rows
+    while (enif_get_list_cell(env, rows, &head, &tail))
+    {
+        // TODO need it?
+        sqlite3_reset(stmt->stmt);
+
+        // bind row
+        for (unsigned int i = 1; i <= stmt_param_count; i++)
+        {
+            ERL_NIF_TERM param;
+
+            if (!enif_get_list_cell(env, head, &param, &head))
+                return enif_make_badarg(env);
+
+            switch (types_array[i - 1])
+            {
+            case SQLITE_INTEGER:
+                rc = bind_integer(env, stmt->stmt, i, param);
+                break;
+
+            case SQLITE_FLOAT:
+                rc = bind_real(env, stmt->stmt, i, param);
+                break;
+
+            case SQLITE_TEXT:
+                rc = bind_text(env, stmt->stmt, i, param);
+                break;
+
+            case SQLITE_BLOB:
+                rc = bind_blob(env, stmt->stmt, i, param);
+                break;
+            }
+
+            if (rc != SQLITE_OK)
+                return raise_sqlite3_error(env, rc, db->db);
+        }
+
+        rc = sqlite3_step(stmt->stmt);
+        if (rc != SQLITE_DONE)
+            return raise_sqlite3_error(env, rc, db->db);
+
+        rows = tail;
+    }
+
+    return am_ok;
+}
+
+// TODO reset the statement after fetching all rows
+static ERL_NIF_TERM
+xqlite_fetch_all(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    // assert(env);
+
+    // if (argc != 2)
+    //     return enif_make_badarg(env);
+
+    // db_t *db;
+    // if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
+    //     return enif_make_badarg(env);
+
+    // stmt_t *stmt;
+    // if (!enif_get_resource(env, argv[1], stmt_type, (void **)&stmt))
+    //     return enif_make_badarg(env);
+
+    // ERL_NIF_TERM row;
+    // ERL_NIF_TERM rows = enif_make_list_from_array(env, NULL, 0);
+    // while (1)
+    // {
+    //     int rc = sqlite3_step(stmt->stmt);
+    //     switch (rc)
+    //     {
+    //     case SQLITE_DONE:
+    //         return rows;
+
+    //     case SQLITE_ROW:
+    //         row = make_row(env, stmt->stmt);
+    //         rows = enif_make_list_cell(env, row, rows);
+    //         break;
+
+    //     default:
+    //         sqlite3_reset(stmt->stmt);
+    //         return raise_sqlite3_error(env, rc, db->db);
+    //     }
+    // }
+
+    return am_ok;
+}
+
 static void
 db_type_destructor(ErlNifEnv *env, void *arg)
 {
@@ -498,6 +675,7 @@ on_load(ErlNifEnv *env, void **priv, ERL_NIF_TERM info)
     am_ok = enif_make_atom(env, "ok");
     am_error = enif_make_atom(env, "error");
     am_nil = enif_make_atom(env, "nil");
+    // TODO rename to alloc_error
     am_out_of_memory = enif_make_atom(env, "out_of_memory");
     am_done = enif_make_atom(env, "done");
     am_row = enif_make_atom(env, "row");
@@ -539,6 +717,9 @@ static ErlNifFunc nif_funcs[] = {
     {"step_nif", 2, xqlite_step},
     {"dirty_io_step_nif", 3, xqlite_multi_step, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"step_nif", 3, xqlite_multi_step},
+
+    {"dirty_io_fetch_all_nif", 2, xqlite_fetch_all, ERL_NIF_DIRTY_JOB_IO_BOUND},
+    {"dirty_io_insert_all_nif", 4, xqlite_insert_all, ERL_NIF_DIRTY_JOB_IO_BOUND},
 };
 
 ERL_NIF_INIT(Elixir.XQLite, nif_funcs, on_load, NULL, NULL, on_unload)

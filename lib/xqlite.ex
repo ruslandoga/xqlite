@@ -161,8 +161,19 @@ defmodule XQLite do
   """
   @spec insert_all(db, stmt, [:integer | :real | :text | :blob], [row]) :: :ok
   def insert_all(db, stmt, types, rows) do
-    dirty_io_insert_all_nif(db, stmt, types, rows)
+    dirty_io_insert_all_nif(db, stmt, process_types(types), rows)
   end
+
+  defp process_types([type | types]) do
+    [process_type(type) | process_types(types)]
+  end
+
+  defp process_types([] = done), do: done
+
+  defp process_type(:integer), do: 1
+  defp process_type(:real), do: 2
+  defp process_type(:text), do: 3
+  defp process_type(:blob), do: 4
 
   # TODO
   # @spec interupt(db) :: :ok
