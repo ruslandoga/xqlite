@@ -3,8 +3,8 @@ defmodule XQLite do
 
   @type db :: reference
   @type stmt :: reference
-  @type param :: binary | number | boolean | nil
-  @type row :: [binary | number | nil]
+  @type value :: binary | number | nil
+  @type row :: [value]
 
   open_flags = [
     readonly: 0x00000001,
@@ -80,29 +80,17 @@ defmodule XQLite do
   @spec prepare(db, binary, [prepare_flag]) :: stmt
   def prepare(db, sql, flags), do: dirty_cpu_prepare_nif(db, sql, bor_prepare_flags(flags))
 
-  @spec bind_all(stmt, [param]) :: :ok
-  def bind_all(stmt, values), do: dirty_cpu_bind_all_nif(stmt, values)
+  @spec bind_text(db, stmt, non_neg_integer, binary) :: :ok
+  def bind_text(_db, _stmt, _index, _text), do: :erlang.nif_error(:undef)
 
-  @spec unsafe_bind_all(stmt, [param]) :: :ok
-  def unsafe_bind_all(stmt, values), do: bind_all_nif(stmt, values)
+  @spec bind_blob(db, stmt, non_neg_integer, binary) :: :ok
+  def bind_blob(_db, _stmt, _index, _blob), do: :erlang.nif_error(:undef)
 
-  @spec bind_text(stmt, non_neg_integer, binary) :: :ok
-  def bind_text(stmt, index, text), do: dirty_cpu_bind_text_nif(stmt, index, text)
+  @spec bind_number(db, stmt, non_neg_integer, number) :: :ok
+  def bind_number(_db, _stmt, _index, _number), do: :erlang.nif_error(:undef)
 
-  @spec unsafe_bind_text(stmt, non_neg_integer, binary) :: :ok
-  def unsafe_bind_text(stmt, index, text), do: bind_text_nif(stmt, index, text)
-
-  @spec bind_blob(stmt, non_neg_integer, binary) :: :ok
-  def bind_blob(stmt, index, blob), do: dirty_cpu_bind_blob_nif(stmt, index, blob)
-
-  @spec unsafe_bind_blob(stmt, non_neg_integer, binary) :: :ok
-  def unsafe_bind_blob(stmt, index, blob), do: bind_blob_nif(stmt, index, blob)
-
-  @spec bind_number(stmt, non_neg_integer, number) :: :ok
-  def bind_number(stmt, index, number), do: dirty_cpu_bind_number_nif(stmt, index, number)
-
-  @spec unsafe_bind_number(stmt, non_neg_integer, number) :: :ok
-  def unsafe_bind_number(stmt, index, number), do: bind_number_nif(stmt, index, number)
+  @spec bind_null(db, stmt, non_neg_integer) :: :ok
+  def bind_null(_db, _stmt, _index), do: :erlang.nif_error(:undef)
 
   @spec finalize(stmt) :: :ok
   def finalize(stmt), do: dirty_cpu_finalize_nif(stmt)
@@ -119,29 +107,29 @@ defmodule XQLite do
   @spec unsafe_step(db, stmt, non_neg_integer) :: {:rows | :done, [row]}
   def unsafe_step(db, stmt, count), do: step_nif(db, stmt, count)
 
+  # TODO
+  # @spec interupt(db) :: :ok
+  # def interupt(_db), do: :erlang.nif_error(:undef)
+
   @compile {:autoload, false}
   @on_load {:load_nif, 0}
 
   @doc false
   def load_nif do
-    path = :filename.join(:code.priv_dir(:xqlite), ~c"xqlite_nif")
-    :erlang.load_nif(path, 0)
+    :code.priv_dir(:xqlite)
+    |> :filename.join(~c"xqlite_nif")
+    |> :erlang.load_nif(0)
   end
 
   defp dirty_io_open_nif(_path, _flags), do: :erlang.nif_error(:undef)
   defp dirty_io_close_nif(_db), do: :erlang.nif_error(:undef)
+
   defp dirty_cpu_prepare_nif(_db, _sql, _flags), do: :erlang.nif_error(:undef)
-  defp dirty_cpu_bind_all_nif(_stmt, _values), do: :erlang.nif_error(:undef)
-  defp bind_all_nif(_stmt, _values), do: :erlang.nif_error(:undef)
-  defp dirty_cpu_bind_text_nif(_stmt, _index, _text), do: :erlang.nif_error(:undef)
-  defp bind_text_nif(_stmt, _index, _text), do: :erlang.nif_error(:undef)
-  defp dirty_cpu_bind_blob_nif(_stmt, _index, _blob), do: :erlang.nif_error(:undef)
-  defp bind_blob_nif(_stmt, _index, _blob), do: :erlang.nif_error(:undef)
-  defp dirty_cpu_bind_number_nif(_stmt, _index, _number), do: :erlang.nif_error(:undef)
-  defp bind_number_nif(_stmt, _index, _number), do: :erlang.nif_error(:undef)
   defp dirty_cpu_finalize_nif(_stmt), do: :erlang.nif_error(:undef)
+
   defp dirty_io_step_nif(_db, _stmt), do: :erlang.nif_error(:undef)
   defp step_nif(_db, _stmt), do: :erlang.nif_error(:undef)
+
   defp dirty_io_step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
   defp step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
 end
