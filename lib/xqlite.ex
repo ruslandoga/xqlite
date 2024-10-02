@@ -48,11 +48,29 @@ defmodule XQLite do
     Enum.reduce(flags, 0, fn flag, acc -> Bitwise.bor(acc, open_flag(flag)) end)
   end
 
+  @doc """
+  Opens a database.
+
+  Example:
+
+      writer = XQLite.open("test.db", [:readwrite, :create, :wal, :exrescode])
+      reader = XQLite.open("test.db", [:readonly, :exrescode])
+
+  """
   @spec open(Path.t(), [open_flag]) :: db
   def open(path, flags) do
     dirty_io_open_nif(to_charlist(path), bor_open_flags(flags))
   end
 
+  @doc """
+  Closes a database.
+
+  Example:
+
+      db = XQLite.open("test.db", [:readwrite, :create])
+      XQLite.close(db)
+
+  """
   @spec close(db) :: :ok
   def close(db), do: dirty_io_close_nif(db)
 
@@ -77,6 +95,15 @@ defmodule XQLite do
     Enum.reduce(flags, 0, fn flag, acc -> Bitwise.bor(acc, prepare_flag(flag)) end)
   end
 
+  @doc """
+  Prepares a statement.
+
+  Example:
+
+      db = XQLite.open("test.db", [:readwrite, :create])
+      stmt = XQLite.prepare(db, "SELECT * FROM users")
+
+  """
   @spec prepare(db, binary, [prepare_flag]) :: stmt
   def prepare(db, sql, flags), do: dirty_cpu_prepare_nif(db, sql, bor_prepare_flags(flags))
 
@@ -107,6 +134,36 @@ defmodule XQLite do
   @spec unsafe_step(db, stmt, non_neg_integer) :: {:rows | :done, [row]}
   def unsafe_step(db, stmt, count), do: step_nif(db, stmt, count)
 
+  @doc """
+  Returns all rows from a prepared statement.
+
+  Example:
+
+      db = XQLite.open("test.db", [:readwrite, :create])
+      stmt = XQLite.prepare(db, "SELECT * FROM users")
+      XQLite.fetch_all(db, stmt)
+
+  """
+  @spec fetch_all(db, stmt) :: [row]
+  def fetch_all(db, stmt) do
+    :lists.reverse(dirty_io_fetch_all_nif(db, stmt))
+  end
+
+  @doc """
+  Bulk-insert rows into a prepared statement.
+
+  Example:
+
+      db = XQLite.open("test.db", [:readwrite, :create])
+      stmt = XQLite.prepare(db, "INSERT INTO users (name) VALUES (?)")
+      XQLite.insert_all(db, stmt, [:text], [["Alice"], ["Bob"], ["Charlie"]])
+
+  """
+  @spec insert_all(db, stmt, [:integer | :real | :text | :blob], [row]) :: :ok
+  def insert_all(db, stmt, types, rows) do
+    dirty_io_insert_all_nif(db, stmt, types, rows)
+  end
+
   # TODO
   # @spec interupt(db) :: :ok
   # def interupt(_db), do: :erlang.nif_error(:undef)
@@ -132,4 +189,7 @@ defmodule XQLite do
 
   defp dirty_io_step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
   defp step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
+
+  defp dirty_io_fetch_all_nif(_db, _stmt), do: :erlang.nif_error(:undef)
+  defp dirty_io_insert_all_nif(_db, _stmt, _types, _rows), do: :erlang.nif_error(:undef)
 end
