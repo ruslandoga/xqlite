@@ -19,9 +19,6 @@ defmodule XQLite.MixProject do
   defp deps do
     [
       {:benchee, "~> 1.3", only: :bench},
-      {:exqlite, "~> 0.20", only: :bench},
-      {:sqlite, "~> 2.0", only: :bench},
-      {:esqlite, "~> 0.8.8", only: :bench},
       {:elixir_make, "~> 0.8", runtime: false}
     ]
   end
