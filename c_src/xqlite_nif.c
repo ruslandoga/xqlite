@@ -596,45 +596,43 @@ xqlite_insert_all(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     return am_ok;
 }
 
-// TODO reset the statement after fetching all rows
 static ERL_NIF_TERM
 xqlite_fetch_all(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    // assert(env);
+    assert(env);
 
-    // if (argc != 2)
-    //     return enif_make_badarg(env);
+    if (argc != 2)
+        return enif_make_badarg(env);
 
-    // db_t *db;
-    // if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
-    //     return enif_make_badarg(env);
+    db_t *db;
+    if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
+        return enif_make_badarg(env);
 
-    // stmt_t *stmt;
-    // if (!enif_get_resource(env, argv[1], stmt_type, (void **)&stmt))
-    //     return enif_make_badarg(env);
+    stmt_t *stmt;
+    if (!enif_get_resource(env, argv[1], stmt_type, (void **)&stmt))
+        return enif_make_badarg(env);
 
-    // ERL_NIF_TERM row;
-    // ERL_NIF_TERM rows = enif_make_list_from_array(env, NULL, 0);
-    // while (1)
-    // {
-    //     int rc = sqlite3_step(stmt->stmt);
-    //     switch (rc)
-    //     {
-    //     case SQLITE_DONE:
-    //         return rows;
+    ERL_NIF_TERM row;
+    ERL_NIF_TERM rows = enif_make_list_from_array(env, NULL, 0);
 
-    //     case SQLITE_ROW:
-    //         row = make_row(env, stmt->stmt);
-    //         rows = enif_make_list_cell(env, row, rows);
-    //         break;
+    while (1)
+    {
+        int rc = sqlite3_step(stmt->stmt);
+        switch (rc)
+        {
+        case SQLITE_DONE:
+            return rows;
 
-    //     default:
-    //         sqlite3_reset(stmt->stmt);
-    //         return raise_sqlite3_error(env, rc, db->db);
-    //     }
-    // }
+        case SQLITE_ROW:
+            row = make_row(env, stmt->stmt);
+            rows = enif_make_list_cell(env, row, rows);
+            break;
 
-    return am_ok;
+        default:
+            sqlite3_reset(stmt->stmt);
+            return raise_sqlite3_error(env, rc, db->db);
+        }
+    }
 }
 
 static void

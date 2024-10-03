@@ -129,10 +129,18 @@ defmodule XQLite do
   def unsafe_step(db, stmt), do: step_nif(db, stmt)
 
   @spec step(db, stmt, non_neg_integer) :: {:rows | :done, [row]}
-  def step(db, stmt, count), do: dirty_io_step_nif(db, stmt, count)
+  def step(db, stmt, count) do
+    with {tag, rows} <- dirty_io_step_nif(db, stmt, count) do
+      {tag, :lists.reverse(rows)}
+    end
+  end
 
   @spec unsafe_step(db, stmt, non_neg_integer) :: {:rows | :done, [row]}
-  def unsafe_step(db, stmt, count), do: step_nif(db, stmt, count)
+  def unsafe_step(db, stmt, count) do
+    with {tag, rows} <- step_nif(db, stmt, count) do
+      {tag, :lists.reverse(rows)}
+    end
+  end
 
   @doc """
   Returns all rows from a prepared statement.

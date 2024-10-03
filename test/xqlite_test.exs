@@ -181,28 +181,36 @@ defmodule XQLiteTest do
     end
 
     test "inserts rows", %{db: db} do
-      exec(db, "create table users (name text) strict")
+      :done = exec(db, "create table users(name text) strict")
 
-      insert = XQLite.prepare(db, "insert into users (name) values (?)")
+      insert = XQLite.prepare(db, "insert into users(name) values(?)")
       on_exit(fn -> XQLite.finalize(insert) end)
 
       types = [:text]
       rows = [["Alice"], ["Bob"], [nil], ["Charlie"]]
+
+      :done = exec(db, "begin immediate")
       assert :ok = XQLite.insert_all(db, insert, types, rows)
+      :done = exec(db, "commit")
 
-      select = XQLite.prepare(db, "select rowid, name from users order by rowid")
-      on_exit(fn -> XQLite.finalize(select) end)
-
-      # TODO
-      # assert XQLite.fetch_all(db, select) == [[1, "Alice"], [2, "Bob"], [3, nil], [4, "Charlie"]]
-      assert XQLite.step(db, select, 100) ==
-               {:done, [[1, "Alice"], [2, "Bob"], [3, nil], [4, "Charlie"]]}
+      assert prepare_fetch_all(db, "select rowid, name from users order by rowid") == [
+               [1, "Alice"],
+               [2, "Bob"],
+               [3, nil],
+               [4, "Charlie"]
+             ]
     end
   end
 
   defp exec(db, sql) do
     stmt = XQLite.prepare(db, sql)
     on_exit(fn -> XQLite.finalize(stmt) end)
-    XQLite.step(db, stmt, 100)
+    XQLite.step(db, stmt)
+  end
+
+  defp prepare_fetch_all(db, sql) do
+    select = XQLite.prepare(db, sql)
+    on_exit(fn -> XQLite.finalize(select) end)
+    XQLite.fetch_all(db, select)
   end
 end
