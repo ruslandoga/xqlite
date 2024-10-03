@@ -7,8 +7,8 @@
 #define STATIC_ERLANG_NIF_LIBNAME xqlite_nif
 #endif
 
-// #include <erl_nif.h>
-#include "/Users/x/.asdf/installs/erlang/27.0/usr/include/erl_nif.h"
+#include <erl_nif.h>
+// #include "/Users/x/.asdf/installs/erlang/27.0/usr/include/erl_nif.h"
 #include <sqlite3.h>
 
 #define MAX_ATOM_LENGTH 255
@@ -515,7 +515,7 @@ xqlite_insert_all(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     assert(env);
 
-    if (argc != 2)
+    if (argc != 4)
         return enif_make_badarg(env);
 
     db_t *db;

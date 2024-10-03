@@ -193,7 +193,10 @@ defmodule XQLiteTest do
       select = XQLite.prepare(db, "select rowid, name from users order by rowid")
       on_exit(fn -> XQLite.finalize(select) end)
 
-      assert XQLite.fetch_all(db, select) == [[1, "Alice"], [2, "Bob"], [3, nil], [4, "Charlie"]]
+      # TODO
+      # assert XQLite.fetch_all(db, select) == [[1, "Alice"], [2, "Bob"], [3, nil], [4, "Charlie"]]
+      assert XQLite.step(db, select, 100) ==
+               {:done, [[1, "Alice"], [2, "Bob"], [3, nil], [4, "Charlie"]]}
     end
   end
 

@@ -150,7 +150,7 @@ defmodule XQLite do
   end
 
   @doc """
-  Bulk-insert rows into a prepared statement.
+  Bulk-insert rows into a prepared statement. Must be called inside a transaction.
 
   Example:
 

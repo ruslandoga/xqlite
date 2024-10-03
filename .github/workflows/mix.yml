@@ -13,7 +13,6 @@ jobs:
       MIX_ENV: test
 
     strategy:
-      # https://hexdocs.pm/elixir/compatibility-and-deprecations.html#between-elixir-and-erlang-otp
       matrix:
         elixir: [1.17]
         otp: [27]
@@ -39,6 +38,40 @@ jobs:
       - run: mix deps.get --only $MIX_ENV
       - run: mix compile --warnings-as-errors
       - run: mix test
+
+  bench:
+    runs-on: ubuntu-latest
+
+    env:
+      MIX_ENV: bench
+
+    strategy:
+      matrix:
+        elixir: [1.17]
+        otp: [27]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: bench-otp-${{ matrix.otp }}-elixir-${{ matrix.elixir }}-ref-${{ github.head_ref || github.ref }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            bench-otp-${{ matrix.otp }}-elixir-${{ matrix.elixir }}-ref-${{ github.head_ref || github.ref }}-mix-
+            bench-otp-${{ matrix.otp }}-elixir-${{ matrix.elixir }}-ref-refs/heads/master-mix-
+
+      - run: mix deps.get --only $MIX_ENV
+      - run: mix compile --warnings-as-errors
+      - run: mix run bench/bind_all.exs
+      - run: mix run bench/insert_all.exs
 
   format:
     runs-on: ubuntu-latest
