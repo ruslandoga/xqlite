@@ -1,5 +1,6 @@
 defmodule XQLiteTest do
   use ExUnit.Case, async: true
+  doctest XQLite
 
   describe "open/2" do
     @tag :tmp_dir
@@ -111,7 +112,7 @@ defmodule XQLiteTest do
       {:ok, db: db, stmt: stmt}
     end
 
-    test "binds text", %{db: db, stmt: stmt} do
+    test "binds binary", %{db: db, stmt: stmt} do
       assert :ok = XQLite.bind_blob(db, stmt, 1, <<0, 0, 0>>)
       assert {:row, [<<0, 0, 0>>]} = XQLite.unsafe_step(db, stmt)
     end
@@ -141,11 +142,15 @@ defmodule XQLiteTest do
     end
 
     test "fetches <count> rows", %{db: db, stmt: stmt} do
-      assert {:rows, [[1], [2], [3]]} = XQLite.step(db, stmt, 3)
+      assert {:rows, [[1]]} = XQLite.step(db, stmt, 1)
+      assert {:rows, [[2], [3]]} = XQLite.step(db, stmt, 2)
       assert {:rows, [[4], [5], [6]]} = XQLite.step(db, stmt, 3)
-      assert {:rows, [[7], [8], [9]]} = XQLite.step(db, stmt, 3)
-      assert {:done, rows} = XQLite.step(db, stmt, 1000)
-      assert length(rows) == 91
+
+      assert {:done, rows} = XQLite.step(db, stmt, 94 + 1)
+      assert length(rows) == 94
+
+      assert {:done, rows} = XQLite.step(db, stmt, 100 + 1)
+      assert length(rows) == 100
     end
   end
 

@@ -53,8 +53,9 @@ defmodule XQLite do
 
   Example:
 
-      writer = XQLite.open("test.db", [:readwrite, :create, :wal, :exrescode])
-      reader = XQLite.open("test.db", [:readonly, :exrescode])
+      iex> _writer = XQLite.open("test.db", [:readwrite, :create, :wal, :exrescode])
+      iex> _reader = XQLite.open("test.db", [:readonly, :exrescode])
+      iex> _memory = XQLite.open(":memory:", [:readwrite])
 
   """
   @spec open(Path.t(), [open_flag]) :: db
@@ -67,13 +68,14 @@ defmodule XQLite do
 
   Example:
 
-      db = XQLite.open("test.db", [:readwrite, :create])
-      XQLite.close(db)
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> XQLite.close(db)
 
   """
   @spec close(db) :: :ok
   def close(db), do: dirty_io_close_nif(db)
 
+  @doc "Same as `prepare/3` but with no flags."
   @spec prepare(db, binary) :: stmt
   def prepare(db, sql), do: dirty_cpu_prepare_nif(db, sql, 0)
 
@@ -100,34 +102,111 @@ defmodule XQLite do
 
   Example:
 
-      db = XQLite.open("test.db", [:readwrite, :create])
-      stmt = XQLite.prepare(db, "SELECT * FROM users")
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> XQLite.prepare(db, "SELECT ?", [:persistent])
 
   """
   @spec prepare(db, binary, [prepare_flag]) :: stmt
   def prepare(db, sql, flags), do: dirty_cpu_prepare_nif(db, sql, bor_prepare_flags(flags))
 
-  @spec bind_text(db, stmt, non_neg_integer, binary) :: :ok
+  @doc """
+  Binds a text or null value to a prepared statement.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT ?")
+      iex> XQLite.bind_text(db, stmt, 1, "Alice")
+      iex> XQLite.bind_text(db, stmt, 1, nil)
+
+  """
+  @spec bind_text(db, stmt, non_neg_integer, binary | nil) :: :ok
   def bind_text(_db, _stmt, _index, _text), do: :erlang.nif_error(:undef)
 
-  @spec bind_blob(db, stmt, non_neg_integer, binary) :: :ok
+  @doc """
+  Binds a blob or null value to a prepared statement.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT ?")
+      iex> XQLite.bind_blob(db, stmt, 1, <<0, 0, 0>>)
+      iex> XQLite.bind_blob(db, stmt, 1, nil)
+
+  """
+  @spec bind_blob(db, stmt, non_neg_integer, binary | nil) :: :ok
   def bind_blob(_db, _stmt, _index, _blob), do: :erlang.nif_error(:undef)
 
-  @spec bind_number(db, stmt, non_neg_integer, number) :: :ok
+  @doc """
+  Binds a numeric or null value to a prepared statement.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT ?")
+      iex> XQLite.bind_number(db, stmt, 1, 42)
+      iex> XQLite.bind_number(db, stmt, 1, 42.5)
+      iex> XQLite.bind_number(db, stmt, 1, nil)
+
+  """
+  @spec bind_number(db, stmt, non_neg_integer, number | nil) :: :ok
   def bind_number(_db, _stmt, _index, _number), do: :erlang.nif_error(:undef)
 
+  @doc """
+  Binds a null value to a prepared statement.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT ?")
+      iex> XQLite.bind_null(db, stmt, 1)
+
+  """
   @spec bind_null(db, stmt, non_neg_integer) :: :ok
   def bind_null(_db, _stmt, _index), do: :erlang.nif_error(:undef)
 
+  @doc """
+  Releases resources associated with a prepared statement.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT ?")
+      iex> XQLite.finalize(stmt)
+
+  """
   @spec finalize(stmt) :: :ok
   def finalize(stmt), do: dirty_cpu_finalize_nif(stmt)
 
+  @doc """
+  Executes a prepared statement once.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT 1")
+      iex> XQLite.step(db, stmt)
+      {:row, [1]}
+
+  """
   @spec step(db, stmt) :: {:row, row} | :done
   def step(db, stmt), do: dirty_io_step_nif(db, stmt)
 
+  @doc "Same as `step/2` but runs on a main scheduler."
   @spec unsafe_step(db, stmt) :: {:row, row} | :done
   def unsafe_step(db, stmt), do: step_nif(db, stmt)
 
+  @doc """
+  Executes a prepared statement `count` times.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "select 1")
+      iex> XQLite.step(db, stmt, 2)
+      {:done, [[1]]}
+
+  """
   @spec step(db, stmt, non_neg_integer) :: {:rows | :done, [row]}
   def step(db, stmt, count) do
     with {tag, rows} <- dirty_io_step_nif(db, stmt, count) do
@@ -135,6 +214,7 @@ defmodule XQLite do
     end
   end
 
+  @doc "Same as `step/3` but runs on a main scheduler."
   @spec unsafe_step(db, stmt, non_neg_integer) :: {:rows | :done, [row]}
   def unsafe_step(db, stmt, count) do
     with {tag, rows} <- step_nif(db, stmt, count) do
@@ -147,9 +227,10 @@ defmodule XQLite do
 
   Example:
 
-      db = XQLite.open("test.db", [:readwrite, :create])
-      stmt = XQLite.prepare(db, "SELECT * FROM users")
-      XQLite.fetch_all(db, stmt)
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT 1")
+      iex> XQLite.fetch_all(db, stmt)
+      [[1]]
 
   """
   @spec fetch_all(db, stmt) :: [row]
@@ -162,9 +243,15 @@ defmodule XQLite do
 
   Example:
 
-      db = XQLite.open("test.db", [:readwrite, :create])
-      stmt = XQLite.prepare(db, "INSERT INTO users (name) VALUES (?)")
-      XQLite.insert_all(db, stmt, [:text], [["Alice"], ["Bob"], ["Charlie"]])
+      iex> db = XQLite.open(":memory:", [:readwrite])
+      iex> create = XQLite.prepare(db, "CREATE TABLE users (name TEXT)")
+      iex> XQLite.step(db, create)
+      iex> begin = XQLite.prepare(db, "BEGIN IMMEDIATE")
+      iex> insert = XQLite.prepare(db, "INSERT INTO users (name) VALUES (?)")
+      iex> commit = XQLite.prepare(db, "COMMIT")
+      iex> XQLite.step(db, begin)
+      iex> XQLite.insert_all(db, insert, [:text], [["Alice"], [nil], ["Bob"]])
+      iex> XQLite.step(db, commit)
 
   """
   @spec insert_all(db, stmt, [:integer | :real | :text | :blob], [row]) :: :ok
