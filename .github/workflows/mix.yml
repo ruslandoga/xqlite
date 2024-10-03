@@ -72,6 +72,7 @@ jobs:
       - run: mix compile --warnings-as-errors
       - run: mix run bench/bind_all.exs
       - run: mix run bench/insert_all.exs
+      - run: mix run bench/fetch_all.exs
 
   format:
     runs-on: ubuntu-latest
