@@ -8,7 +8,6 @@
 #endif
 
 #include <erl_nif.h>
-// #include "/Users/x/.asdf/installs/erlang/27.0/usr/include/erl_nif.h"
 #include <sqlite3.h>
 
 #define MAX_ATOM_LENGTH 255
@@ -35,23 +34,13 @@ typedef struct stmt
     sqlite3_stmt *stmt;
 } stmt_t;
 
-// TODO: https://www.erlang.org/doc/apps/erts/erl_nif#enif_make_new_binary
 static ERL_NIF_TERM
-make_binary(ErlNifEnv *env, const void *bytes, unsigned int size)
+make_binary(ErlNifEnv *env, const void *bytes, size_t size)
 {
-    ErlNifBinary bin;
-    ERL_NIF_TERM term;
-
-    if (!enif_alloc_binary(size, &bin))
-    {
-        return enif_raise_exception(env, am_out_of_memory);
-    }
-
-    memcpy(bin.data, bytes, size);
-    term = enif_make_binary(env, &bin);
-    enif_release_binary(&bin);
-
-    return term;
+    ERL_NIF_TERM bin;
+    uint8_t *data = enif_make_new_binary(env, size, &bin);
+    memcpy(data, bytes, size);
+    return bin;
 }
 
 // TODO just return rc, and let caller handle error, export the necessary nifs

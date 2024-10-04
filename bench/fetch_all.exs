@@ -11,19 +11,19 @@
 
 # ##### With input 10 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all      197.54 K        5.06 μs   ±197.25%        4.58 μs        8.88 μs
+# fetch_all      239.86 K        4.17 μs   ±205.19%        4.08 μs        5.58 μs
 
 # ##### With input 100 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all       21.58 K       46.34 μs    ±48.59%       40.54 μs      141.96 μs
+# fetch_all       30.10 K       33.23 μs    ±11.39%       33.54 μs       42.96 μs
 
 # ##### With input 1000 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all        2.96 K      337.43 μs     ±9.53%      347.38 μs      397.77 μs
+# fetch_all        4.32 K      231.67 μs     ±3.97%      231.08 μs      265.76 μs
 
 # ##### With input 10000 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all        349.03        2.87 ms    ±11.60%        3.16 ms        3.30 ms
+# fetch_all        469.37        2.13 ms     ±4.21%        2.18 ms        2.43 ms
 
 sql = """
 with recursive cte(i,t) as (
