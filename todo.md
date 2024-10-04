@@ -1,5 +1,5 @@
 - named binds, e.g.: XQLite.bind_number(db, stmt, "id", 30)
-- optimise small ints
+- optimise small ints and maybe use something other SQLITE_TRANSIENT in binaries (when its safe)
 - optimise make_cell more
 - improve error handling
 - maybe start tx automatically in XQlite.insert_all
