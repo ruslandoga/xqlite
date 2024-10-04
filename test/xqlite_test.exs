@@ -5,16 +5,19 @@ defmodule XQLiteTest do
   describe "open/2" do
     @tag :tmp_dir
     test "creates and opens a database on disk", %{tmp_dir: tmp_dir} do
-      path = Path.join(tmp_dir, "test.db")
+      path = Path.join(tmp_dir, "test-💽.db")
+
       db = XQLite.open(path, [:readwrite, :create])
       on_exit(fn -> XQLite.close(db) end)
-      assert is_reference(db)
+
+      assert [[0, "main", path]] = prepare_fetch_all(db, "pragma database_list")
+      assert Path.basename(path) == "test-💽.db"
     end
 
     test "opens an in-memory database" do
       db = XQLite.open(":memory:", [:readonly])
       on_exit(fn -> XQLite.close(db) end)
-      assert is_reference(db)
+      assert prepare_fetch_all(db, "pragma database_list") == [[0, "main", ""]]
     end
   end
 
@@ -33,9 +36,9 @@ defmodule XQLiteTest do
     end
 
     test "prepares a statement", %{db: db} do
-      stmt = XQLite.prepare(db, "select 1 + 1", [:persistent])
+      stmt = XQLite.prepare(db, "select 1 + 1, '🤷‍♂️'", [:persistent])
       on_exit(fn -> XQLite.finalize(stmt) end)
-      assert is_reference(stmt)
+      assert {:row, [2, "🤷‍♂️"]} = XQLite.unsafe_step(db, stmt)
     end
   end
 
@@ -103,8 +106,8 @@ defmodule XQLiteTest do
     end
 
     test "binds text", %{db: db, stmt: stmt} do
-      assert :ok = XQLite.bind_text(db, stmt, 1, "hello")
-      assert {:row, ["hello"]} = XQLite.unsafe_step(db, stmt)
+      assert :ok = XQLite.bind_text(db, stmt, 1, "hello 👋 world 🌏")
+      assert {:row, ["hello 👋 world 🌏"]} = XQLite.unsafe_step(db, stmt)
     end
   end
 
@@ -122,6 +125,23 @@ defmodule XQLiteTest do
     test "binds binary", %{db: db, stmt: stmt} do
       assert :ok = XQLite.bind_blob(db, stmt, 1, <<0, 0, 0>>)
       assert {:row, [<<0, 0, 0>>]} = XQLite.unsafe_step(db, stmt)
+    end
+  end
+
+  describe "bind_null/3" do
+    setup do
+      db = XQLite.open(":memory:", [:readonly])
+      on_exit(fn -> XQLite.close(db) end)
+
+      stmt = XQLite.prepare(db, "select ?")
+      on_exit(fn -> XQLite.finalize(stmt) end)
+
+      {:ok, db: db, stmt: stmt}
+    end
+
+    test "binds nil", %{db: db, stmt: stmt} do
+      assert :ok = XQLite.bind_null(db, stmt, 1)
+      assert {:row, [nil]} = XQLite.unsafe_step(db, stmt)
     end
   end
 
@@ -188,23 +208,29 @@ defmodule XQLiteTest do
     end
 
     test "inserts rows", %{db: db} do
-      :done = exec(db, "create table users(name text) strict")
+      :done = exec(db, "create table test(i integer, f real, txt text, bin blob) strict")
 
-      insert = XQLite.prepare(db, "insert into users(name) values(?)")
+      insert = XQLite.prepare(db, "insert into test(i, f, txt, bin) values(?, ?, ?, ?)")
       on_exit(fn -> XQLite.finalize(insert) end)
 
-      types = [:text]
-      rows = [["Alice"], ["Bob"], [nil], ["Charlie"]]
+      types = [:integer, :float, :text, :blob]
+
+      rows = [
+        [1, 0.3, "Alice", <<0>>],
+        [nil, 3.14, nil, <<1>>],
+        [2, nil, "Bob", nil],
+        [nil, nil, nil, nil]
+      ]
 
       :done = exec(db, "begin immediate")
       assert :ok = XQLite.insert_all(db, insert, types, rows)
       :done = exec(db, "commit")
 
-      assert prepare_fetch_all(db, "select rowid, name from users order by rowid") == [
-               [1, "Alice"],
-               [2, "Bob"],
-               [3, nil],
-               [4, "Charlie"]
+      assert prepare_fetch_all(db, "select rowid, * from test order by rowid") == [
+               [1, 1, 0.3, "Alice", <<0>>],
+               [2, nil, 3.14, nil, <<1>>],
+               [3, 2, nil, "Bob", nil],
+               [4, nil, nil, nil, nil]
              ]
     end
   end
