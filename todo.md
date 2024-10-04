@@ -7,6 +7,5 @@
 - on close, use sqlite3_next_stmt to finalize all prepared statements?
 - check what happens when insert_all's prepared statement is executed after schema change
 - check what happens interrupt is called between steps in fetch all
-- use assert on argc, don't check at runtime
-- check if reset is safe to run on main scheduler
-- test reset
+- test reset, and fetch_all
+- use more assert
