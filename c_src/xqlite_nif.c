@@ -719,16 +719,16 @@ static ErlNifFunc nif_funcs[] = {
     {"dirty_io_open_nif", 2, xqlite_open, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"dirty_io_close_nif", 1, xqlite_close, ERL_NIF_DIRTY_JOB_IO_BOUND},
 
-    {"dirty_cpu_prepare_nif", 3, xqlite_prepare, ERL_NIF_DIRTY_JOB_CPU_BOUND},
-    {"dirty_cpu_finalize_nif", 1, xqlite_finalize, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    {"prepare_nif", 3, xqlite_prepare, ERL_NIF_DIRTY_JOB_CPU_BOUND},
+    {"finalize", 1, xqlite_finalize, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
     {"bind_text", 4, xqlite_bind_text},
     {"bind_blob", 4, xqlite_bind_blob},
     {"bind_number", 4, xqlite_bind_number},
     {"bind_null", 3, xqlite_bind_null},
 
-    {"dirty_io_step_nif", 2, xqlite_step, ERL_NIF_DIRTY_JOB_IO_BOUND},
-    {"step_nif", 2, xqlite_step},
+    {"step", 2, xqlite_step, ERL_NIF_DIRTY_JOB_IO_BOUND},
+    {"unsafe_step", 2, xqlite_step},
     {"dirty_io_step_nif", 3, xqlite_multi_step, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"step_nif", 3, xqlite_multi_step},
 

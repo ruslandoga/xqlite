@@ -1,5 +1,5 @@
-# Commit: 48e1f3f7fae55571e51b97ff02c66ecab71c2363
-# Date: Thu Oct  3 14:17:20 +07 2024
+# Commit: c7cdc431196b6778227e4b4931ac70324d0364a2
+# Date: Fri Oct  4 12:11:07 +07 2024
 
 # Operating System: macOS
 # CPU Information: Apple M2
@@ -9,21 +9,21 @@
 # Erlang 27.0
 # JIT enabled: true
 
-# ##### With input [path: "./bench/insert_all.db", flags: [:create, :readwrite, :nomutex, :wal], types: [:integer, :text], rows: 1000] #####
+# ##### With input path: "./bench/insert_all.db", types: 2, rows: 1000 #####
 # Name                 ips        average  deviation         median         99th %
-# insert_all        2.40 K      416.96 μs    ±29.87%      404.46 μs      811.94 μs
+# insert_all        4.04 K      247.40 μs    ±31.95%         243 μs      275.67 μs
 
-# ##### With input [path: "./bench/insert_all.db", flags: [:create, :readwrite, :nomutex], types: [:integer, :text], rows: 3] #####
+# ##### With input path: "./bench/insert_all.db", types: 2, rows: 3 #####
 # Name                 ips        average  deviation         median         99th %
-# insert_all      315.74 K        3.17 μs   ±381.10%        3.04 μs        6.21 μs
+# insert_all      547.12 K        1.83 μs   ±244.99%        1.75 μs        3.50 μs
 
-# ##### With input [path: ":memory:", flags: [:readwrite, :nomutex], types: [:integer, :text], rows: 1000] #####
+# ##### With input path: ":memory:", types: 2, rows: 1000 #####
 # Name                 ips        average  deviation         median         99th %
-# insert_all        2.54 K      393.84 μs    ±23.09%      390.50 μs      427.30 μs
+# insert_all        4.12 K      242.43 μs    ±12.30%      239.50 μs      273.71 μs
 
-# ##### With input [path: ":memory:", flags: [:readwrite, :nomutex], types: [:integer, :text], rows: 3] #####
+# ##### With input path: ":memory:", types: 2, rows: 3 #####
 # Name                 ips        average  deviation         median         99th %
-# insert_all      329.44 K        3.04 μs    ±93.13%        2.92 μs        3.42 μs
+# insert_all      553.43 K        1.81 μs   ±104.28%        1.79 μs        2.42 μs
 
 resource = fn input ->
   path = Keyword.fetch!(input, :path)
@@ -111,9 +111,11 @@ Benchee.run(
     Map.new(inputs, fn input ->
       name =
         input
-        |> Keyword.take([:path, :flags, :types, :rows])
+        |> Keyword.take([:path, :types, :rows])
         |> Keyword.update!(:rows, &length/1)
-        |> inspect()
+        |> Keyword.update!(:types, &length/1)
+        |> Enum.map(fn {key, value} -> "#{key}: #{inspect(value)}" end)
+        |> Enum.join(", ")
 
       {name, input}
     end),

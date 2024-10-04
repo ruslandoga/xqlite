@@ -43,13 +43,15 @@ defmodule XQLite do
     raise ArgumentError, "unknown flag: #{inspect(invalid)}"
   end
 
-  @spec bor_open_flags([open_flag]) :: integer
-  defp bor_open_flags(flags) do
-    Enum.reduce(flags, 0, fn flag, acc -> Bitwise.bor(acc, open_flag(flag)) end)
+  @spec bor_open_flags([open_flag], integer) :: integer
+  defp bor_open_flags([flag | flags], acc) do
+    bor_open_flags(flags, Bitwise.bor(acc, open_flag(flag)))
   end
 
+  defp bor_open_flags([] = _done, result), do: result
+
   @doc """
-  Opens a database.
+  Opens a database using [sqlite3_open_v2()](https://www.sqlite.org/c3ref/open.html)
 
   Example:
 
@@ -60,11 +62,11 @@ defmodule XQLite do
   """
   @spec open(Path.t(), [open_flag]) :: db
   def open(path, flags) do
-    dirty_io_open_nif(to_charlist(path), bor_open_flags(flags))
+    dirty_io_open_nif(to_charlist(path), bor_open_flags(flags, 0))
   end
 
   @doc """
-  Closes a database.
+  Closes a database using [sqlite3_close_v2()](https://www.sqlite.org/c3ref/close.html)
 
   Example:
 
@@ -77,7 +79,7 @@ defmodule XQLite do
 
   @doc "Same as `prepare/3` but with no flags."
   @spec prepare(db, binary) :: stmt
-  def prepare(db, sql), do: dirty_cpu_prepare_nif(db, sql, 0)
+  def prepare(db, sql), do: prepare_nif(db, sql, 0)
 
   prepare_flags = [persistent: 0x01, normalize: 0x02, no_vtab: 0x04]
   prepare_flag_names = Enum.map(prepare_flags, fn {name, _value} -> name end)
@@ -92,13 +94,15 @@ defmodule XQLite do
     raise ArgumentError, "unknown flag: #{inspect(invalid)}"
   end
 
-  @spec bor_prepare_flags([prepare_flag]) :: integer
-  defp bor_prepare_flags(flags) do
-    Enum.reduce(flags, 0, fn flag, acc -> Bitwise.bor(acc, prepare_flag(flag)) end)
+  @spec bor_prepare_flags([prepare_flag], integer) :: integer
+  defp bor_prepare_flags([flag | flags], acc) do
+    bor_prepare_flags(flags, Bitwise.bor(acc, prepare_flag(flag)))
   end
 
+  defp bor_prepare_flags([] = _done, result), do: result
+
   @doc """
-  Prepares a statement.
+  Prepares a statement using [sqlite3_prepare_v3()](https://www.sqlite.org/c3ref/prepare.html)
 
   Example:
 
@@ -107,7 +111,7 @@ defmodule XQLite do
 
   """
   @spec prepare(db, binary, [prepare_flag]) :: stmt
-  def prepare(db, sql, flags), do: dirty_cpu_prepare_nif(db, sql, bor_prepare_flags(flags))
+  def prepare(db, sql, flags), do: prepare_nif(db, sql, bor_prepare_flags(flags, 0))
 
   @doc """
   Binds a text or null value to a prepared statement.
@@ -120,7 +124,7 @@ defmodule XQLite do
       iex> XQLite.bind_text(db, stmt, 1, nil)
 
   """
-  @spec bind_text(db, stmt, non_neg_integer, binary | nil) :: :ok
+  @spec bind_text(db, stmt, non_neg_integer, String.t() | nil) :: :ok
   def bind_text(_db, _stmt, _index, _text), do: :erlang.nif_error(:undef)
 
   @doc """
@@ -176,7 +180,7 @@ defmodule XQLite do
 
   """
   @spec finalize(stmt) :: :ok
-  def finalize(stmt), do: dirty_cpu_finalize_nif(stmt)
+  def finalize(_stmt), do: :erlang.nif_error(:undef)
 
   @doc """
   Executes a prepared statement once.
@@ -190,11 +194,11 @@ defmodule XQLite do
 
   """
   @spec step(db, stmt) :: {:row, row} | :done
-  def step(db, stmt), do: dirty_io_step_nif(db, stmt)
+  def step(_db, _stmt), do: :erlang.nif_error(:undef)
 
   @doc "Same as `step/2` but runs on a main scheduler."
   @spec unsafe_step(db, stmt) :: {:row, row} | :done
-  def unsafe_step(db, stmt), do: step_nif(db, stmt)
+  def unsafe_step(_db, _stmt), do: :erlang.nif_error(:undef)
 
   @doc """
   Executes a prepared statement `count` times.
@@ -223,7 +227,7 @@ defmodule XQLite do
   end
 
   @doc """
-  Cause any pending operation to stop at its earliest opportunity.
+  Causes any pending operation to stop at its earliest opportunity.
 
   Example:
 
@@ -302,11 +306,7 @@ defmodule XQLite do
   defp dirty_io_open_nif(_path, _flags), do: :erlang.nif_error(:undef)
   defp dirty_io_close_nif(_db), do: :erlang.nif_error(:undef)
 
-  defp dirty_cpu_prepare_nif(_db, _sql, _flags), do: :erlang.nif_error(:undef)
-  defp dirty_cpu_finalize_nif(_stmt), do: :erlang.nif_error(:undef)
-
-  defp dirty_io_step_nif(_db, _stmt), do: :erlang.nif_error(:undef)
-  defp step_nif(_db, _stmt), do: :erlang.nif_error(:undef)
+  defp prepare_nif(_db, _sql, _flags), do: :erlang.nif_error(:undef)
 
   defp dirty_io_step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
   defp step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
