@@ -1,5 +1,5 @@
 # Commit: 5f2c88426e8dfbb81da70b2911f6835e1209dfbf
-# Date: Fri Oct  4 12:35:46 +07 2024
+# Date: Fri Oct  4 14:15:11 +07 2024
 
 # Operating System: macOS
 # CPU Information: Apple M2
@@ -11,29 +11,27 @@
 
 # ##### With input 10 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all      239.86 K        4.17 μs   ±205.19%        4.08 μs        5.58 μs
+# fetch_all      245.23 K        4.08 μs   ±197.25%           4 μs        5.50 μs
 
 # ##### With input 100 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all       30.10 K       33.23 μs    ±11.39%       33.54 μs       42.96 μs
+# fetch_all       37.06 K       26.99 μs    ±15.49%       27.67 μs       36.08 μs
 
 # ##### With input 1000 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all        4.32 K      231.67 μs     ±3.97%      231.08 μs      265.76 μs
+# fetch_all        4.96 K      201.76 μs     ±5.17%      201.42 μs      232.77 μs
 
 # ##### With input 10000 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all        469.37        2.13 ms     ±4.21%        2.18 ms        2.43 ms
+# fetch_all        532.55        1.88 ms     ±4.70%        1.83 ms        2.17 ms
 
 sql = """
-with recursive cte(i,t) as (
-  select 1, 'hello1'
+with recursive cte(i) as (
+  values(0)
   union all
-  select i + 1, 'hello' || i
-  from cte
-  where i < ?
+  select i + 1 from cte where i < ?
 )
-select * from cte
+select i, 'hello' || i, null from cte
 """
 
 Benchee.run(
