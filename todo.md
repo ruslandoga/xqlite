@@ -7,4 +7,3 @@
 - on close, use sqlite3_next_stmt to finalize all prepared statements?
 - check what happens when insert_all's prepared statement is executed after schema change
 - check what happens interrupt is called between steps in fetch all
-- add bind_real, remove bind_number nif, remove nil checks in bind_* nifs, leave them only in insert_all

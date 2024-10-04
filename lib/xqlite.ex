@@ -114,47 +114,56 @@ defmodule XQLite do
   def prepare(db, sql, flags), do: prepare_nif(db, sql, bor_prepare_flags(flags, 0))
 
   @doc """
-  Binds a text or null value to a prepared statement.
+  Binds a text value to a prepared statement.
 
   Example:
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
       iex> XQLite.bind_text(db, stmt, 1, "Alice")
-      iex> XQLite.bind_text(db, stmt, 1, nil)
 
   """
-  @spec bind_text(db, stmt, non_neg_integer, String.t() | nil) :: :ok
+  @spec bind_text(db, stmt, non_neg_integer, String.t()) :: :ok
   def bind_text(_db, _stmt, _index, _text), do: :erlang.nif_error(:undef)
 
   @doc """
-  Binds a blob or null value to a prepared statement.
+  Binds a blob value to a prepared statement.
 
   Example:
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
       iex> XQLite.bind_blob(db, stmt, 1, <<0, 0, 0>>)
-      iex> XQLite.bind_blob(db, stmt, 1, nil)
 
   """
-  @spec bind_blob(db, stmt, non_neg_integer, binary | nil) :: :ok
+  @spec bind_blob(db, stmt, non_neg_integer, binary) :: :ok
   def bind_blob(_db, _stmt, _index, _blob), do: :erlang.nif_error(:undef)
 
   @doc """
-  Binds a numeric or null value to a prepared statement.
+  Binds an integer value to a prepared statement.
 
   Example:
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_number(db, stmt, 1, 42)
-      iex> XQLite.bind_number(db, stmt, 1, 42.5)
-      iex> XQLite.bind_number(db, stmt, 1, nil)
+      iex> XQLite.bind_integer(db, stmt, 1, 42)
 
   """
-  @spec bind_number(db, stmt, non_neg_integer, number | nil) :: :ok
-  def bind_number(_db, _stmt, _index, _number), do: :erlang.nif_error(:undef)
+  @spec bind_integer(db, stmt, non_neg_integer, integer) :: :ok
+  def bind_integer(_db, _stmt, _index, _integer), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Binds a float value to a prepared statement.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT ?")
+      iex> XQLite.bind_float(db, stmt, 1, 0.334)
+
+  """
+  @spec bind_float(db, stmt, non_neg_integer, float) :: :ok
+  def bind_float(_db, _stmt, _index, _float), do: :erlang.nif_error(:undef)
 
   @doc """
   Binds a null value to a prepared statement.
@@ -273,7 +282,7 @@ defmodule XQLite do
       iex> XQLite.step(db, commit)
 
   """
-  @spec insert_all(db, stmt, [:integer | :real | :text | :blob], [row]) :: :ok
+  @spec insert_all(db, stmt, [:integer | :float | :text | :blob], [row]) :: :ok
   def insert_all(db, stmt, types, rows) do
     dirty_io_insert_all_nif(db, stmt, process_types(types), rows)
   end
@@ -285,7 +294,7 @@ defmodule XQLite do
   defp process_types([] = done), do: done
 
   defp process_type(:integer), do: 1
-  defp process_type(:real), do: 2
+  defp process_type(:float), do: 2
   defp process_type(:text), do: 3
   defp process_type(:blob), do: 4
 

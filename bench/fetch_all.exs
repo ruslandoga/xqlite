@@ -50,7 +50,7 @@ Benchee.run(
   before_scenario: fn rows ->
     db = XQLite.open(":memory:", [:readonly, :nomutex])
     stmt = XQLite.prepare(db, sql, [:persistent])
-    XQLite.bind_number(db, stmt, 1, rows)
+    XQLite.bind_integer(db, stmt, 1, rows)
     %{db: db, stmt: stmt}
   end,
   after_scenario: fn %{db: db, stmt: stmt} ->

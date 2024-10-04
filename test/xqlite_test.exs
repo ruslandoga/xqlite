@@ -52,7 +52,7 @@ defmodule XQLiteTest do
     end
   end
 
-  describe "bind_number/4" do
+  describe "bind_integer/4" do
     setup do
       db = XQLite.open(":memory:", [:readonly])
       on_exit(fn -> XQLite.close(db) end)
@@ -63,19 +63,31 @@ defmodule XQLiteTest do
       {:ok, db: db, stmt: stmt}
     end
 
-    test "binds integer", %{db: db, stmt: stmt} do
-      assert :ok = XQLite.bind_number(db, stmt, 1, 42)
+    test "binds i32", %{db: db, stmt: stmt} do
+      assert :ok = XQLite.bind_integer(db, stmt, 1, 42)
       assert {:row, [42]} = XQLite.unsafe_step(db, stmt)
     end
 
-    test "binds float", %{db: db, stmt: stmt} do
-      assert :ok = XQLite.bind_number(db, stmt, 1, 21.5)
-      assert {:row, [21.5]} = XQLite.unsafe_step(db, stmt)
+    test "binds i64", %{db: db, stmt: stmt} do
+      assert :ok = XQLite.bind_integer(db, stmt, 1, 0xFFFFFFFF + 1)
+      assert {:row, [0x100000000]} = XQLite.unsafe_step(db, stmt)
+    end
+  end
+
+  describe "bind_float/4" do
+    setup do
+      db = XQLite.open(":memory:", [:readonly])
+      on_exit(fn -> XQLite.close(db) end)
+
+      stmt = XQLite.prepare(db, "select ?")
+      on_exit(fn -> XQLite.finalize(stmt) end)
+
+      {:ok, db: db, stmt: stmt}
     end
 
-    test "binds null", %{db: db, stmt: stmt} do
-      assert :ok = XQLite.bind_number(db, stmt, 1, nil)
-      assert {:row, [nil]} = XQLite.unsafe_step(db, stmt)
+    test "binds float", %{db: db, stmt: stmt} do
+      assert :ok = XQLite.bind_float(db, stmt, 1, 0.334)
+      assert {:row, [0.334]} = XQLite.unsafe_step(db, stmt)
     end
   end
 
@@ -94,11 +106,6 @@ defmodule XQLiteTest do
       assert :ok = XQLite.bind_text(db, stmt, 1, "hello")
       assert {:row, ["hello"]} = XQLite.unsafe_step(db, stmt)
     end
-
-    test "binds null", %{db: db, stmt: stmt} do
-      assert :ok = XQLite.bind_text(db, stmt, 1, nil)
-      assert {:row, [nil]} = XQLite.unsafe_step(db, stmt)
-    end
   end
 
   describe "bind_blob/4" do
@@ -115,11 +122,6 @@ defmodule XQLiteTest do
     test "binds binary", %{db: db, stmt: stmt} do
       assert :ok = XQLite.bind_blob(db, stmt, 1, <<0, 0, 0>>)
       assert {:row, [<<0, 0, 0>>]} = XQLite.unsafe_step(db, stmt)
-    end
-
-    test "binds null", %{db: db, stmt: stmt} do
-      assert :ok = XQLite.bind_blob(db, stmt, 1, nil)
-      assert {:row, [nil]} = XQLite.unsafe_step(db, stmt)
     end
   end
 

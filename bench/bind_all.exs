@@ -27,26 +27,17 @@ Benchee.run(
     "bind_null" => fn ->
       XQLite.bind_null(db, stmt, 1)
     end,
-    "bind_number(int)" => fn ->
-      XQLite.bind_number(db, stmt, 1, 100)
+    "bind_integer(int)" => fn ->
+      XQLite.bind_integer(db, stmt, 1, 100)
     end,
-    "bind_number(float)" => fn ->
-      XQLite.bind_number(db, stmt, 1, 42.5)
-    end,
-    "bind_number(nil)" => fn ->
-      XQLite.bind_number(db, stmt, 1, nil)
+    "bind_float(float)" => fn ->
+      XQLite.bind_float(db, stmt, 1, 42.5)
     end,
     "bind_text(text)" => fn ->
       XQLite.bind_text(db, stmt, 1, "hello")
     end,
-    "bind_text(nil)" => fn ->
-      XQLite.bind_text(db, stmt, 1, nil)
-    end,
     "bind_blob(bin)" => fn ->
       XQLite.bind_blob(db, stmt, 1, <<0, 0, 0>>)
-    end,
-    "bind_blob(nil)" => fn ->
-      XQLite.bind_blob(db, stmt, 1, nil)
     end
   },
   # https://github.com/bencheeorg/benchee/issues/389#issuecomment-1801511676
