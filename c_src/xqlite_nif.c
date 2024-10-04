@@ -395,26 +395,51 @@ make_cell(ErlNifEnv *env, sqlite3_stmt *stmt, unsigned int idx)
     }
 }
 
-// TODO can make list of cells in one go?
 static ERL_NIF_TERM
-make_row(ErlNifEnv *env, sqlite3_stmt *stmt)
+make_row(ErlNifEnv *env, unsigned int column_count, sqlite3_stmt *stmt)
 {
     assert(env);
     assert(stmt);
 
-    unsigned int count = sqlite3_column_count(stmt);
+    // TODO lol this is a bit silly, but it's a start
+    switch (column_count)
+    {
+    case 0:
+        return enif_make_list(env, 0);
+    case 1:
+        return enif_make_list(env, 1, make_cell(env, stmt, 0));
+    case 2:
+        return enif_make_list(env, 2, make_cell(env, stmt, 0), make_cell(env, stmt, 1));
+    case 3:
+        return enif_make_list(env, 3, make_cell(env, stmt, 0), make_cell(env, stmt, 1), make_cell(env, stmt, 2));
+    case 4:
+        return enif_make_list(env, 4, make_cell(env, stmt, 0), make_cell(env, stmt, 1), make_cell(env, stmt, 2), make_cell(env, stmt, 3));
+    case 5:
+        return enif_make_list(env, 5, make_cell(env, stmt, 0), make_cell(env, stmt, 1), make_cell(env, stmt, 2), make_cell(env, stmt, 3), make_cell(env, stmt, 4));
+    case 6:
+        return enif_make_list(env, 6, make_cell(env, stmt, 0), make_cell(env, stmt, 1), make_cell(env, stmt, 2), make_cell(env, stmt, 3), make_cell(env, stmt, 4), make_cell(env, stmt, 5));
+    case 7:
+        return enif_make_list(env, 7, make_cell(env, stmt, 0), make_cell(env, stmt, 1), make_cell(env, stmt, 2), make_cell(env, stmt, 3), make_cell(env, stmt, 4), make_cell(env, stmt, 5), make_cell(env, stmt, 6));
+    case 8:
+        return enif_make_list(env, 8, make_cell(env, stmt, 0), make_cell(env, stmt, 1), make_cell(env, stmt, 2), make_cell(env, stmt, 3), make_cell(env, stmt, 4), make_cell(env, stmt, 5), make_cell(env, stmt, 6), make_cell(env, stmt, 7));
+    case 9:
+        return enif_make_list(env, 9, make_cell(env, stmt, 0), make_cell(env, stmt, 1), make_cell(env, stmt, 2), make_cell(env, stmt, 3), make_cell(env, stmt, 4), make_cell(env, stmt, 5), make_cell(env, stmt, 6), make_cell(env, stmt, 7), make_cell(env, stmt, 8));
+    // TODO continue till 16
+    default:
+    {
+        ERL_NIF_TERM *columns;
+        columns = enif_alloc(sizeof(ERL_NIF_TERM) * column_count);
+        if (!columns)
+            return enif_raise_exception(env, am_out_of_memory);
 
-    ERL_NIF_TERM *columns;
-    columns = enif_alloc(sizeof(ERL_NIF_TERM) * count);
-    if (!columns)
-        return enif_raise_exception(env, am_out_of_memory);
+        for (unsigned int i = 0; i < column_count; i++)
+            columns[i] = make_cell(env, stmt, i);
 
-    for (unsigned int i = 0; i < count; i++)
-        columns[i] = make_cell(env, stmt, i);
-
-    ERL_NIF_TERM row = enif_make_list_from_array(env, columns, count);
-    enif_free(columns);
-    return row;
+        ERL_NIF_TERM row = enif_make_list_from_array(env, columns, column_count);
+        enif_free(columns);
+        return row;
+    }
+    }
 }
 
 static ERL_NIF_TERM
@@ -433,13 +458,17 @@ xqlite_step(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_get_resource(env, argv[1], stmt_type, (void **)&stmt))
         return enif_make_badarg(env);
 
+    unsigned int column_count = sqlite3_column_count(stmt->stmt);
     int rc = sqlite3_step(stmt->stmt);
+
     switch (rc)
     {
     case SQLITE_ROW:
-        return enif_make_tuple2(env, am_row, make_row(env, stmt->stmt));
+        return enif_make_tuple2(env, am_row, make_row(env, column_count, stmt->stmt));
+
     case SQLITE_DONE:
         return am_done;
+
     default:
         return raise_sqlite3_error(env, rc, db->db);
     }
@@ -465,6 +494,8 @@ xqlite_multi_step(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_get_uint(env, argv[2], &steps))
         return enif_make_badarg(env);
 
+    unsigned int column_count = sqlite3_column_count(stmt->stmt);
+
     ERL_NIF_TERM row;
     ERL_NIF_TERM rows = enif_make_list_from_array(env, NULL, 0);
     for (unsigned int step = 0; step < steps; step++)
@@ -476,7 +507,7 @@ xqlite_multi_step(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
             return enif_make_tuple2(env, am_done, rows);
 
         case SQLITE_ROW:
-            row = make_row(env, stmt->stmt);
+            row = make_row(env, column_count, stmt->stmt);
             rows = enif_make_list_cell(env, row, rows);
             break;
 
@@ -628,6 +659,8 @@ xqlite_fetch_all(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_get_resource(env, argv[1], stmt_type, (void **)&stmt))
         return enif_make_badarg(env);
 
+    unsigned int column_count = sqlite3_column_count(stmt->stmt);
+
     ERL_NIF_TERM row;
     ERL_NIF_TERM rows = enif_make_list_from_array(env, NULL, 0);
 
@@ -640,7 +673,7 @@ xqlite_fetch_all(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
             return rows;
 
         case SQLITE_ROW:
-            row = make_row(env, stmt->stmt);
+            row = make_row(env, column_count, stmt->stmt);
             rows = enif_make_list_cell(env, row, rows);
             break;
 
