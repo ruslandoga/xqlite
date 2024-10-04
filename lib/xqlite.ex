@@ -223,6 +223,21 @@ defmodule XQLite do
   end
 
   @doc """
+  Cause any pending operation to stop at its earliest opportunity.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "with recursive c(x) as (values(1) union all select x+1 from c where x < 10000000000000) select sum(x) from c")
+      iex> spawn(fn -> :timer.sleep(10); XQLite.interrupt(db) end)
+      iex> XQLite.step(db, stmt)
+      ** (ErlangError) Erlang error: {:error, 9, ~c"interrupted"}
+
+  """
+  @spec interrupt(db) :: :ok
+  def interrupt(_db), do: :erlang.nif_error(:undef)
+
+  @doc """
   Returns all rows from a prepared statement.
 
   Example:

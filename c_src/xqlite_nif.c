@@ -490,6 +490,22 @@ xqlite_multi_step(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
+xqlite_interrupt(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(env);
+
+    if (argc != 1)
+        return enif_make_badarg(env);
+
+    db_t *db;
+    if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
+        return enif_make_badarg(env);
+
+    sqlite3_interrupt(db->db);
+    return am_ok;
+}
+
+static ERL_NIF_TERM
 xqlite_finalize(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     assert(env);
@@ -715,6 +731,8 @@ static ErlNifFunc nif_funcs[] = {
     {"step_nif", 2, xqlite_step},
     {"dirty_io_step_nif", 3, xqlite_multi_step, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"step_nif", 3, xqlite_multi_step},
+
+    {"interrupt", 1, xqlite_interrupt},
 
     {"dirty_io_fetch_all_nif", 2, xqlite_fetch_all, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"dirty_io_insert_all_nif", 4, xqlite_insert_all, ERL_NIF_DIRTY_JOB_IO_BOUND},

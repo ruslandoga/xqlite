@@ -1,7 +1,6 @@
 - named binds, e.g.: XQLite.bind_number(db, stmt, "id", 30)
 - optimise small binaries
 - optimise make_cell
-- add XQLite.interrupt
 - improve error handling
 - maybe start tx automatically in XQlite.insert_all
 - expose more C api (columns, changes, last insert rowid, release memory, load_extensions, expanded/normalized sql, wal, stats (scan status), etc.)
