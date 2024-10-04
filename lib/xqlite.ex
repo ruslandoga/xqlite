@@ -289,10 +289,6 @@ defmodule XQLite do
   defp process_type(:text), do: 3
   defp process_type(:blob), do: 4
 
-  # TODO
-  # @spec interupt(db) :: :ok
-  # def interupt(_db), do: :erlang.nif_error(:undef)
-
   @compile {:autoload, false}
   @on_load {:load_nif, 0}
 
