@@ -190,6 +190,7 @@ defmodule XQLite do
       iex> XQLite.reset(db, stmt)
       iex> XQLite.bind_text(db, stmt, 1, "answer")
       iex> XQLite.step(db, stmt, 2)
+      {:done, [["answer"]]}
 
   """
   @spec reset(db, stmt) :: :ok

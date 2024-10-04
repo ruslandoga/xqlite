@@ -57,6 +57,29 @@ defmodule XQLiteTest do
     end
   end
 
+  describe "bind and fetch_all" do
+    setup do
+      db = XQLite.open(":memory:", [:readonly])
+      on_exit(fn -> XQLite.close(db) end)
+
+      stmt = XQLite.prepare(db, "select ?, ?, ?, ?, ?")
+      on_exit(fn -> XQLite.finalize(stmt) end)
+
+      {:ok, db: db, stmt: stmt}
+    end
+
+    property "integer, float, text, blob, and null", %{db: db, stmt: stmt} do
+      check all(integer <- integer(), float <- float(), binary <- binary()) do
+        XQLite.bind_integer(db, stmt, 1, integer)
+        XQLite.bind_float(db, stmt, 2, float)
+        XQLite.bind_text(db, stmt, 3, binary)
+        XQLite.bind_blob(db, stmt, 4, binary)
+        XQLite.bind_null(db, stmt, 5)
+        assert [[^integer, ^float, ^binary, ^binary, nil]] = XQLite.fetch_all(db, stmt)
+      end
+    end
+  end
+
   describe "bind_integer/4" do
     setup do
       db = XQLite.open(":memory:", [:readonly])
@@ -68,37 +91,9 @@ defmodule XQLiteTest do
       {:ok, db: db, stmt: stmt}
     end
 
-    property "binds integer", %{db: db, stmt: stmt} do
-      check all(integer <- integer()) do
-        XQLite.reset(db, stmt)
-        XQLite.bind_integer(db, stmt, 1, integer)
-        assert [[^integer]] = XQLite.fetch_all(db, stmt)
-      end
-    end
-
     test "binds integers larger than INT32_MAX", %{db: db, stmt: stmt} do
       XQLite.bind_integer(db, stmt, 1, 0xFFFFFFFF + 1)
       assert {:row, [0x100000000]} = XQLite.unsafe_step(db, stmt)
-    end
-  end
-
-  describe "bind_float/4" do
-    setup do
-      db = XQLite.open(":memory:", [:readonly])
-      on_exit(fn -> XQLite.close(db) end)
-
-      stmt = XQLite.prepare(db, "select ?")
-      on_exit(fn -> XQLite.finalize(stmt) end)
-
-      {:ok, db: db, stmt: stmt}
-    end
-
-    property "binds float", %{db: db, stmt: stmt} do
-      check all(float <- float()) do
-        XQLite.reset(db, stmt)
-        XQLite.bind_float(db, stmt, 1, float)
-        assert [[^float]] = XQLite.fetch_all(db, stmt)
-      end
     end
   end
 
@@ -113,54 +108,9 @@ defmodule XQLiteTest do
       {:ok, db: db, stmt: stmt}
     end
 
-    property "binds text", %{db: db, stmt: stmt} do
-      check all(text <- binary()) do
-        XQLite.reset(db, stmt)
-        XQLite.bind_text(db, stmt, 1, text)
-        assert [[^text]] = XQLite.fetch_all(db, stmt)
-      end
-    end
-
     test "binds emojis", %{db: db, stmt: stmt} do
       XQLite.bind_text(db, stmt, 1, "hello 👋 world 🌏")
       assert {:row, ["hello 👋 world 🌏"]} = XQLite.unsafe_step(db, stmt)
-    end
-  end
-
-  describe "bind_blob/4" do
-    setup do
-      db = XQLite.open(":memory:", [:readonly])
-      on_exit(fn -> XQLite.close(db) end)
-
-      stmt = XQLite.prepare(db, "select ?")
-      on_exit(fn -> XQLite.finalize(stmt) end)
-
-      {:ok, db: db, stmt: stmt}
-    end
-
-    property "binds binary", %{db: db, stmt: stmt} do
-      check all(binary <- binary()) do
-        XQLite.reset(db, stmt)
-        XQLite.bind_blob(db, stmt, 1, binary)
-        assert [[^binary]] = XQLite.fetch_all(db, stmt)
-      end
-    end
-  end
-
-  describe "bind_null/3" do
-    setup do
-      db = XQLite.open(":memory:", [:readonly])
-      on_exit(fn -> XQLite.close(db) end)
-
-      stmt = XQLite.prepare(db, "select ?")
-      on_exit(fn -> XQLite.finalize(stmt) end)
-
-      {:ok, db: db, stmt: stmt}
-    end
-
-    test "binds nil", %{db: db, stmt: stmt} do
-      assert :ok = XQLite.bind_null(db, stmt, 1)
-      assert {:row, [nil]} = XQLite.unsafe_step(db, stmt)
     end
   end
 
@@ -252,9 +202,9 @@ defmodule XQLiteTest do
       types = [:integer, :float, :text, :blob]
 
       rows = [
-        [1, 0.3, "Alice", <<0>>],
+        [1, 0.3, "Alice 🤦‍♀️", <<0>>],
         [nil, 3.14, nil, <<1>>],
-        [2, nil, "Bob", nil],
+        [2, nil, "🤷‍♂️ Bob", nil],
         [nil, nil, nil, nil]
       ]
 
@@ -263,9 +213,9 @@ defmodule XQLiteTest do
       :done = exec(db, "commit")
 
       assert prepare_fetch_all(db, "select rowid, * from test order by rowid") == [
-               [1, 1, 0.3, "Alice", <<0>>],
+               [1, 1, 0.3, "Alice 🤦‍♀️", <<0>>],
                [2, nil, 3.14, nil, <<1>>],
-               [3, 2, nil, "Bob", nil],
+               [3, 2, nil, "🤷‍♂️ Bob", nil],
                [4, nil, nil, nil, nil]
              ]
     end
