@@ -36,7 +36,7 @@ typedef struct stmt
 } stmt_t;
 
 static ERL_NIF_TERM
-make_binary(ErlNifEnv *env, const void *bytes, size_t size)
+make_binary(ErlNifEnv *env, const unsigned char *bytes, size_t size)
 {
     ERL_NIF_TERM bin;
     uint8_t *data = enif_make_new_binary(env, size, &bin);
