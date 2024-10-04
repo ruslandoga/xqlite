@@ -19,7 +19,8 @@ defmodule XQLite.MixProject do
   defp deps do
     [
       {:benchee, "~> 1.3", only: :bench},
-      {:elixir_make, "~> 0.8", runtime: false}
+      {:elixir_make, "~> 0.8", runtime: false},
+      {:stream_data, "~> 1.1", only: :test}
     ]
   end
 end

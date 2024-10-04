@@ -1,5 +1,7 @@
 defmodule XQLiteTest do
   use ExUnit.Case, async: true
+  use ExUnitProperties
+
   doctest XQLite
 
   describe "open/2" do
@@ -66,13 +68,16 @@ defmodule XQLiteTest do
       {:ok, db: db, stmt: stmt}
     end
 
-    test "binds i32", %{db: db, stmt: stmt} do
-      assert :ok = XQLite.bind_integer(db, stmt, 1, 42)
-      assert {:row, [42]} = XQLite.unsafe_step(db, stmt)
+    property "binds integer", %{db: db, stmt: stmt} do
+      check all(integer <- integer()) do
+        XQLite.reset(db, stmt)
+        XQLite.bind_integer(db, stmt, 1, integer)
+        assert [[^integer]] = XQLite.fetch_all(db, stmt)
+      end
     end
 
-    test "binds i64", %{db: db, stmt: stmt} do
-      assert :ok = XQLite.bind_integer(db, stmt, 1, 0xFFFFFFFF + 1)
+    test "binds integers larger than INT32_MAX", %{db: db, stmt: stmt} do
+      XQLite.bind_integer(db, stmt, 1, 0xFFFFFFFF + 1)
       assert {:row, [0x100000000]} = XQLite.unsafe_step(db, stmt)
     end
   end
@@ -88,9 +93,12 @@ defmodule XQLiteTest do
       {:ok, db: db, stmt: stmt}
     end
 
-    test "binds float", %{db: db, stmt: stmt} do
-      assert :ok = XQLite.bind_float(db, stmt, 1, 0.334)
-      assert {:row, [0.334]} = XQLite.unsafe_step(db, stmt)
+    property "binds float", %{db: db, stmt: stmt} do
+      check all(float <- float()) do
+        XQLite.reset(db, stmt)
+        XQLite.bind_float(db, stmt, 1, float)
+        assert [[^float]] = XQLite.fetch_all(db, stmt)
+      end
     end
   end
 
@@ -105,8 +113,16 @@ defmodule XQLiteTest do
       {:ok, db: db, stmt: stmt}
     end
 
-    test "binds text", %{db: db, stmt: stmt} do
-      assert :ok = XQLite.bind_text(db, stmt, 1, "hello 👋 world 🌏")
+    property "binds text", %{db: db, stmt: stmt} do
+      check all(text <- binary()) do
+        XQLite.reset(db, stmt)
+        XQLite.bind_text(db, stmt, 1, text)
+        assert [[^text]] = XQLite.fetch_all(db, stmt)
+      end
+    end
+
+    test "binds emojis", %{db: db, stmt: stmt} do
+      XQLite.bind_text(db, stmt, 1, "hello 👋 world 🌏")
       assert {:row, ["hello 👋 world 🌏"]} = XQLite.unsafe_step(db, stmt)
     end
   end
@@ -122,9 +138,12 @@ defmodule XQLiteTest do
       {:ok, db: db, stmt: stmt}
     end
 
-    test "binds binary", %{db: db, stmt: stmt} do
-      assert :ok = XQLite.bind_blob(db, stmt, 1, <<0, 0, 0>>)
-      assert {:row, [<<0, 0, 0>>]} = XQLite.unsafe_step(db, stmt)
+    property "binds binary", %{db: db, stmt: stmt} do
+      check all(binary <- binary()) do
+        XQLite.reset(db, stmt)
+        XQLite.bind_blob(db, stmt, 1, binary)
+        assert [[^binary]] = XQLite.fetch_all(db, stmt)
+      end
     end
   end
 
@@ -184,9 +203,17 @@ defmodule XQLiteTest do
       stmt =
         XQLite.prepare(db, """
         with recursive cte(x) as (
-          select 1 union all select x + 1 from cte where x < 100
+          values(1)
+          union all
+          select x + 1 from cte where x < 100
         )
-        select x from cte
+        select
+          x as integer,
+          x / 3.0 as float,
+          'hello' || x as text,
+          x'000000' as blob,
+          null
+        from cte
         """)
 
       on_exit(fn -> XQLite.finalize(stmt) end)
@@ -195,8 +222,17 @@ defmodule XQLiteTest do
     end
 
     test "fetches all rows", %{db: db, stmt: stmt} do
-      assert [[1], [2], [3] | rest] = XQLite.fetch_all(db, stmt)
-      assert length(rest) == 97
+      assert [
+               [1, 0.3333333333333333, "hello1", <<0, 0, 0>>, nil],
+               [2, 0.6666666666666666, "hello2", <<0, 0, 0>>, nil],
+               [3, 1.0, "hello3", <<0, 0, 0>>, nil],
+               [4, 1.3333333333333333, "hello4", <<0, 0, 0>>, nil],
+               [5, 1.6666666666666667, "hello5", <<0, 0, 0>>, nil],
+               [6, 2.0, "hello6", <<0, 0, 0>>, nil]
+               | rest
+             ] = XQLite.fetch_all(db, stmt)
+
+      assert length(rest) == 94
     end
   end
 

@@ -1,7 +1,7 @@
 #include <assert.h>
-#include <string.h>
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <string.h>
 
 // Elixir workaround for . in module names
 #ifdef STATIC_ERLANG_NIF
@@ -128,8 +128,8 @@ xqlite_close(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     }
 
     // note: _v2 may not fully close the connection, hence why we check if
-    // any transaction is open above, to make sure other connections aren't blocked.
-    // v1 is guaranteed to close or error, but will return error if any
+    // any transaction is open above, to make sure other connections aren't
+    // blocked. v1 is guaranteed to close or error, but will return error if any
     // unfinalized statements, which we likely have, as we rely on the destructors
     // to later run to clean those up
     int rc = sqlite3_close_v2(db->db);
@@ -343,6 +343,29 @@ xqlite_bind_null(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
+xqlite_reset(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(env);
+
+    if (argc != 2)
+        return enif_make_badarg(env);
+
+    db_t *db;
+    if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
+        return enif_make_badarg(env);
+
+    stmt_t *stmt;
+    if (!enif_get_resource(env, argv[1], stmt_type, (void **)&stmt))
+        return enif_make_badarg(env);
+
+    int rc = sqlite3_reset(stmt->stmt);
+    if (rc != SQLITE_OK)
+        return raise_sqlite3_error(env, rc, db->db);
+
+    return am_ok;
+}
+
+static ERL_NIF_TERM
 make_cell(ErlNifEnv *env, sqlite3_stmt *stmt, unsigned int idx)
 {
     switch (sqlite3_column_type(stmt, idx))
@@ -383,21 +406,41 @@ make_row(ErlNifEnv *env, unsigned int column_count, sqlite3_stmt *stmt)
     case 1:
         return enif_make_list(env, 1, make_cell(env, stmt, 0));
     case 2:
-        return enif_make_list(env, 2, make_cell(env, stmt, 0), make_cell(env, stmt, 1));
+        return enif_make_list(env, 2, make_cell(env, stmt, 0),
+                              make_cell(env, stmt, 1));
     case 3:
-        return enif_make_list(env, 3, make_cell(env, stmt, 0), make_cell(env, stmt, 1), make_cell(env, stmt, 2));
+        return enif_make_list(env, 3, make_cell(env, stmt, 0),
+                              make_cell(env, stmt, 1), make_cell(env, stmt, 2));
     case 4:
-        return enif_make_list(env, 4, make_cell(env, stmt, 0), make_cell(env, stmt, 1), make_cell(env, stmt, 2), make_cell(env, stmt, 3));
+        return enif_make_list(env, 4, make_cell(env, stmt, 0),
+                              make_cell(env, stmt, 1), make_cell(env, stmt, 2),
+                              make_cell(env, stmt, 3));
     case 5:
-        return enif_make_list(env, 5, make_cell(env, stmt, 0), make_cell(env, stmt, 1), make_cell(env, stmt, 2), make_cell(env, stmt, 3), make_cell(env, stmt, 4));
+        return enif_make_list(env, 5, make_cell(env, stmt, 0),
+                              make_cell(env, stmt, 1), make_cell(env, stmt, 2),
+                              make_cell(env, stmt, 3), make_cell(env, stmt, 4));
     case 6:
-        return enif_make_list(env, 6, make_cell(env, stmt, 0), make_cell(env, stmt, 1), make_cell(env, stmt, 2), make_cell(env, stmt, 3), make_cell(env, stmt, 4), make_cell(env, stmt, 5));
+        return enif_make_list(env, 6, make_cell(env, stmt, 0),
+                              make_cell(env, stmt, 1), make_cell(env, stmt, 2),
+                              make_cell(env, stmt, 3), make_cell(env, stmt, 4),
+                              make_cell(env, stmt, 5));
     case 7:
-        return enif_make_list(env, 7, make_cell(env, stmt, 0), make_cell(env, stmt, 1), make_cell(env, stmt, 2), make_cell(env, stmt, 3), make_cell(env, stmt, 4), make_cell(env, stmt, 5), make_cell(env, stmt, 6));
+        return enif_make_list(env, 7, make_cell(env, stmt, 0),
+                              make_cell(env, stmt, 1), make_cell(env, stmt, 2),
+                              make_cell(env, stmt, 3), make_cell(env, stmt, 4),
+                              make_cell(env, stmt, 5), make_cell(env, stmt, 6));
     case 8:
-        return enif_make_list(env, 8, make_cell(env, stmt, 0), make_cell(env, stmt, 1), make_cell(env, stmt, 2), make_cell(env, stmt, 3), make_cell(env, stmt, 4), make_cell(env, stmt, 5), make_cell(env, stmt, 6), make_cell(env, stmt, 7));
+        return enif_make_list(env, 8, make_cell(env, stmt, 0),
+                              make_cell(env, stmt, 1), make_cell(env, stmt, 2),
+                              make_cell(env, stmt, 3), make_cell(env, stmt, 4),
+                              make_cell(env, stmt, 5), make_cell(env, stmt, 6),
+                              make_cell(env, stmt, 7));
     case 9:
-        return enif_make_list(env, 9, make_cell(env, stmt, 0), make_cell(env, stmt, 1), make_cell(env, stmt, 2), make_cell(env, stmt, 3), make_cell(env, stmt, 4), make_cell(env, stmt, 5), make_cell(env, stmt, 6), make_cell(env, stmt, 7), make_cell(env, stmt, 8));
+        return enif_make_list(env, 9, make_cell(env, stmt, 0),
+                              make_cell(env, stmt, 1), make_cell(env, stmt, 2),
+                              make_cell(env, stmt, 3), make_cell(env, stmt, 4),
+                              make_cell(env, stmt, 5), make_cell(env, stmt, 6),
+                              make_cell(env, stmt, 7), make_cell(env, stmt, 8));
     // TODO continue till 16
     default:
     {
@@ -438,7 +481,10 @@ xqlite_step(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     switch (rc)
     {
     case SQLITE_ROW:
-        return enif_make_tuple2(env, am_row, make_row(env, column_count, stmt->stmt));
+    {
+        ERL_NIF_TERM row = make_row(env, column_count, stmt->stmt);
+        return enif_make_tuple2(env, am_row, row);
+    }
 
     case SQLITE_DONE:
         return am_done;
@@ -776,6 +822,8 @@ static ErlNifFunc nif_funcs[] = {
     {"bind_integer", 4, xqlite_bind_integer},
     {"bind_float", 4, xqlite_bind_float},
     {"bind_null", 3, xqlite_bind_null},
+
+    {"reset", 2, xqlite_reset},
 
     {"step", 2, xqlite_step, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"unsafe_step", 2, xqlite_step},

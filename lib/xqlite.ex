@@ -179,6 +179,23 @@ defmodule XQLite do
   def bind_null(_db, _stmt, _index), do: :erlang.nif_error(:undef)
 
   @doc """
+  Resets a prepared statement using [sqlite3_reset()](https://www.sqlite.org/c3ref/reset.html)
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT ?")
+      iex> XQLite.bind_integer(db, stmt, 1, 42)
+      iex> XQLite.step(db, stmt, 2)
+      iex> XQLite.reset(db, stmt)
+      iex> XQLite.bind_text(db, stmt, 1, "answer")
+      iex> XQLite.step(db, stmt, 2)
+
+  """
+  @spec reset(db, stmt) :: :ok
+  def reset(_db, _stmt), do: :erlang.nif_error(:undef)
+
+  @doc """
   Releases resources associated with a prepared statement.
 
   Example:
