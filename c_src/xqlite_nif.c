@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdint.h>
 
 // Elixir workaround for . in module names
 #ifdef STATIC_ERLANG_NIF
