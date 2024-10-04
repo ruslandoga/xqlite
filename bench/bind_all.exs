@@ -1,5 +1,5 @@
-# Commit: c7cdc431196b6778227e4b4931ac70324d0364a2
-# Date: Fri Oct  4 12:06:49 +07 2024
+# Commit: 74097a2ad636df6b720f37cedb09a32ff620a622
+# Date: Sat Oct  5 01:10:17 +07 2024
 
 # Operating System: macOS
 # CPU Information: Apple M2
@@ -9,15 +9,12 @@
 # Erlang 27.0
 # JIT enabled: true
 
-# Name                         ips        average  deviation         median         99th %
-# bind_null                16.82 M       59.44 ns ±21786.91%          42 ns          84 ns
-# bind_text(nil)           16.09 M       62.16 ns ±20288.25%          42 ns          84 ns
-# bind_blob(nil)           16.01 M       62.47 ns ±20250.50%          42 ns          84 ns
-# bind_number(nil)         15.98 M       62.56 ns ±20084.52%          42 ns          84 ns
-# bind_number(int)         15.56 M       64.27 ns ±13866.89%          42 ns          84 ns
-# bind_blob(bin)           11.79 M       84.81 ns ±10521.00%          83 ns          84 ns
-# bind_text(text)          11.66 M       85.73 ns ±10866.61%          83 ns          84 ns
-# bind_number(float)       11.33 M       88.22 ns ±10524.39%          83 ns         125 ns
+# Name                        ips        average  deviation         median         99th %
+# bind_null               24.02 M       41.63 ns  ±6270.98%          42 ns          42 ns
+# bind_float(float)       23.41 M       42.71 ns  ±5966.85%          42 ns          42 ns
+# bind_integer(int)       23.26 M       43.00 ns  ±6126.14%          42 ns          42 ns
+# bind_blob(bin)          20.05 M       49.87 ns  ±5774.13%          42 ns          84 ns
+# bind_text(text)         19.81 M       50.48 ns  ±5215.76%          42 ns          84 ns
 
 db = XQLite.open(":memory:", [:readonly, :nomutex])
 stmt = XQLite.prepare(db, "select ?")
