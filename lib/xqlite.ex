@@ -62,7 +62,7 @@ defmodule XQLite do
   """
   @spec open(Path.t(), [open_flag]) :: db
   def open(path, flags) do
-    dirty_io_open_nif(to_charlist(path), bor_open_flags(flags, 0))
+    dirty_io_open_nif(<<path::binary, 0>>, bor_open_flags(flags, 0))
   end
 
   @doc """

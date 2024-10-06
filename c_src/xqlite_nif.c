@@ -2,16 +2,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-
-// Elixir workaround for . in module names
-#ifdef STATIC_ERLANG_NIF
-#define STATIC_ERLANG_NIF_LIBNAME xqlite_nif
-#endif
-
 #include <erl_nif.h>
 #include <sqlite3.h>
-
-#define MAX_ATOM_LENGTH 255
 
 static ERL_NIF_TERM am_ok;
 static ERL_NIF_TERM am_error;
@@ -64,8 +56,8 @@ xqlite_open(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     assert(argc == 2);
 
-    char path[256];
-    if (enif_get_string(env, argv[0], path, sizeof(path), ERL_NIF_UTF8) < 0)
+    ErlNifBinary path;
+    if (!enif_inspect_binary(env, argv[0], &path))
         return enif_make_badarg(env);
 
     int flags;
@@ -73,7 +65,7 @@ xqlite_open(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         return enif_make_badarg(env);
 
     sqlite3 *db;
-    int rc = sqlite3_open_v2(path, &db, flags, NULL);
+    int rc = sqlite3_open_v2((char *)path.data, &db, flags, NULL);
 
     if (rc != SQLITE_OK)
     {
