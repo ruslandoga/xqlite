@@ -1,5 +1,3 @@
-db = XQLite.open(":memory:", [:readonly, :nomutex])
-
 defmodule Bench do
   def columns_count_and_name_all(%{stmt: stmt}) do
     columns_all(stmt, XQLite.column_count(stmt))
