@@ -761,7 +761,7 @@ xqlite_fetch_all(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 }
 
 static ERL_NIF_TERM
-xqlite_changes(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+xqlite_changes64(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
     assert(argc == 1);
 
@@ -769,9 +769,21 @@ xqlite_changes(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
         return enif_make_badarg(env);
 
-    // TODO changes64
-    int changes = sqlite3_changes(db->db);
-    return enif_make_int(env, changes);
+    sqlite_int64 changes = sqlite3_changes64(db->db);
+    return enif_make_int64(env, changes);
+}
+
+static ERL_NIF_TERM
+xqlite_total_changes64(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(argc == 1);
+
+    db_t *db;
+    if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
+        return enif_make_badarg(env);
+
+    sqlite_int64 total_changes = sqlite3_total_changes64(db->db);
+    return enif_make_int64(env, total_changes);
 }
 
 static ERL_NIF_TERM
@@ -855,6 +867,19 @@ xqlite_get_autocommit(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     return enif_make_int(env, autocommit);
 }
 
+static ERL_NIF_TERM
+xqlite_last_insert_rowid(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(argc == 1);
+
+    db_t *db;
+    if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
+        return enif_make_badarg(env);
+
+    sqlite3_int64 last_insert_rowid = sqlite3_last_insert_rowid(db->db);
+    return enif_make_int64(env, last_insert_rowid);
+}
+
 static ErlNifFunc nif_funcs[] = {
     {"dirty_io_open_nif", 2, xqlite_open, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"dirty_io_close_nif", 1, xqlite_close, ERL_NIF_DIRTY_JOB_IO_BOUND},
@@ -879,12 +904,14 @@ static ErlNifFunc nif_funcs[] = {
     {"dirty_io_fetch_all_nif", 2, xqlite_fetch_all, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"dirty_io_insert_all_nif", 4, xqlite_insert_all, ERL_NIF_DIRTY_JOB_IO_BOUND},
 
-    {"changes", 1, xqlite_changes},
+    {"changes", 1, xqlite_changes64},
+    {"total_changes", 1, xqlite_total_changes64},
     {"clear_bindings", 2, xqlite_clear_bindings},
     {"enable_load_extension_nif", 2, xqlite_enable_load_extension},
     {"sql", 1, xqlite_sql},
     {"expanded_sql", 1, xqlite_expanded_sql},
     {"get_autocommit", 1, xqlite_get_autocommit},
+    {"last_insert_rowid", 1, xqlite_last_insert_rowid},
 };
 
 ERL_NIF_INIT(Elixir.XQLite, nif_funcs, on_load, NULL, NULL, on_unload)

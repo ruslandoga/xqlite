@@ -332,6 +332,22 @@ defmodule XQLite do
   def changes(_db), do: :erlang.nif_error(:undef)
 
   @doc """
+  Returns the total number of rows changed since the database connection was open.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readwrite])
+      iex> XQLite.step(db, XQLite.prepare(db, "CREATE TABLE users (name TEXT)"))
+      iex> XQLite.step(db, XQLite.prepare(db, "INSERT INTO users (name) VALUES ('Alice'), ('Bob')"))
+      iex> XQLite.step(db, XQLite.prepare(db, "INSERT INTO users (name) VALUES ('Charlie')"))
+      iex> XQLite.total_changes(db)
+      3
+
+  """
+  @spec total_changes(db) :: integer
+  def total_changes(_db), do: :erlang.nif_error(:undef)
+
+  @doc """
   Resets all bindings on a prepared statement.
 
   Example:
@@ -405,13 +421,28 @@ defmodule XQLite do
       1
 
       iex> db = XQLite.open(":memory:", [:readwrite])
-      iex> XQLite.step(db, XQLite.prepare(db, "BEGIN IMMEDIATE"))
+      iex> XQLite.step(db, XQLite.prepare(db, "begin"))
       iex> XQLite.get_autocommit(db)
       0
 
   """
   @spec get_autocommit(db) :: integer
   def get_autocommit(_db), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Returns the rowid of the most recent successful INSERT.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readwrite])
+      iex> XQLite.step(db, XQLite.prepare(db, "CREATE TABLE users (name TEXT)"))
+      iex> XQLite.step(db, XQLite.prepare(db, "INSERT INTO users (name) VALUES ('Alice'), ('Bob')"))
+      iex> XQLite.last_insert_rowid(db)
+      2
+
+  """
+  @spec last_insert_rowid(db) :: integer
+  def last_insert_rowid(_db), do: :erlang.nif_error(:undef)
 
   @compile {:autoload, false}
   @on_load {:load_nif, 0}
