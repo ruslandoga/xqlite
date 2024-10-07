@@ -444,6 +444,65 @@ defmodule XQLite do
   @spec last_insert_rowid(db) :: integer
   def last_insert_rowid(_db), do: :erlang.nif_error(:undef)
 
+  @doc """
+  Returns the number of bytes of memory currently outstanding (malloced but not freed).
+
+  Example:
+
+      iex> XQLite.memory_used()
+      0
+
+      iex> XQLite.open(":memory:", [:readonly])
+      iex> memory_used = XQLite.memory_used()
+      iex> memory_used > 0
+      true
+
+  """
+  @spec memory_used :: integer
+  def memory_used, do: :erlang.nif_error(:undef)
+
+  @doc """
+  Returns number of columns in a result set.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT 1, 2, 3")
+      iex> XQLite.column_count(stmt)
+      3
+
+  """
+  @spec column_count(stmt) :: integer
+  def column_count(_stmt), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Returns the name of a column in a result set.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT 1 AS one, 2 AS two, 3 AS three")
+      iex> XQLite.column_name(stmt, 0)
+      "one"
+
+  """
+  @spec column_name(stmt, integer) :: String.t() | nil
+  def column_name(_stmt, _idx), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Returns the names of all columns in a result set.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT 1 AS one, 2 AS two, 3 AS three")
+      iex> XQLite.column_names(stmt)
+      ["one", "two", "three"]
+
+  """
+  @spec column_names(stmt) :: [String.t() | nil]
+  def column_names(_stmt), do: :erlang.nif_error(:undef)
+
   @compile {:autoload, false}
   @on_load {:load_nif, 0}
 

@@ -128,11 +128,14 @@ xqlite_open(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     if (!enif_get_int(env, argv[1], &flags))
         return enif_make_badarg(env);
 
-    sqlite3 *db;
-    int rc = sqlite3_open_v2((char *)path.data, &db, flags, NULL);
+    db_t *db = enif_alloc_resource(db_type, sizeof(db_t));
+    if (!db)
+        return enif_raise_exception(env, am_out_of_memory);
 
+    int rc = sqlite3_open_v2((char *)path.data, &db->db, flags, NULL);
     if (rc != SQLITE_OK)
     {
+        enif_release_resource(db);
         const char *msg = sqlite3_errstr(rc);
         ERL_NIF_TERM code = enif_make_int64(env, rc);
         ERL_NIF_TERM reason = enif_make_string(env, msg, ERL_NIF_UTF8);
@@ -140,19 +143,8 @@ xqlite_open(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
         return enif_raise_exception(env, error);
     }
 
-    db_t *db_resource;
-    db_resource = enif_alloc_resource(db_type, sizeof(db_t));
-
-    if (!db_resource)
-    {
-        sqlite3_close_v2(db);
-        return enif_raise_exception(env, am_out_of_memory);
-    }
-
-    db_resource->db = db;
-
-    ERL_NIF_TERM result = enif_make_resource(env, db_resource);
-    enif_release_resource(db_resource);
+    ERL_NIF_TERM result = enif_make_resource(env, db);
+    enif_release_resource(db);
     return result;
 }
 
@@ -880,6 +872,76 @@ xqlite_last_insert_rowid(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     return enif_make_int64(env, last_insert_rowid);
 }
 
+static ERL_NIF_TERM
+xqlite_memory_used(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(argc == 0);
+    sqlite3_int64 memory_used = sqlite3_memory_used();
+    return enif_make_int64(env, memory_used);
+}
+
+static ERL_NIF_TERM
+xqlite_column_count(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(argc == 1);
+
+    stmt_t *stmt;
+    if (!enif_get_resource(env, argv[0], stmt_type, (void **)&stmt))
+        return enif_make_badarg(env);
+
+    int column_count = sqlite3_column_count(stmt->stmt);
+    return enif_make_int(env, column_count);
+}
+
+static ERL_NIF_TERM
+xqlite_column_name(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(argc == 2);
+
+    stmt_t *stmt;
+    if (!enif_get_resource(env, argv[0], stmt_type, (void **)&stmt))
+        return enif_make_badarg(env);
+
+    int idx;
+    if (!enif_get_int(env, argv[1], &idx))
+        return enif_make_badarg(env);
+
+    const char *name = sqlite3_column_name(stmt->stmt, idx);
+    if (!name)
+        return am_nil;
+
+    return make_binary(env, (unsigned char *)name, strlen(name));
+}
+
+// TODO needed?
+static ERL_NIF_TERM
+xqlite_column_names(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(argc == 1);
+
+    stmt_t *stmt;
+    if (!enif_get_resource(env, argv[0], stmt_type, (void **)&stmt))
+        return enif_make_badarg(env);
+
+    int column_count = sqlite3_column_count(stmt->stmt);
+    ERL_NIF_TERM columns[column_count];
+
+    for (unsigned int i = 0; i < column_count; i++)
+    {
+        const char *name = sqlite3_column_name(stmt->stmt, i);
+        if (!name)
+        {
+            columns[i] = am_nil;
+        }
+        else
+        {
+            columns[i] = make_binary(env, (unsigned char *)name, strlen(name));
+        }
+    }
+
+    return enif_make_list_from_array(env, columns, column_count);
+}
+
 static ErlNifFunc nif_funcs[] = {
     {"dirty_io_open_nif", 2, xqlite_open, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"dirty_io_close_nif", 1, xqlite_close, ERL_NIF_DIRTY_JOB_IO_BOUND},
@@ -893,25 +955,34 @@ static ErlNifFunc nif_funcs[] = {
     {"bind_integer", 4, xqlite_bind_integer},
     {"bind_float", 4, xqlite_bind_float},
     {"bind_null", 3, xqlite_bind_null},
+    {"clear_bindings", 2, xqlite_clear_bindings},
 
     {"step", 2, xqlite_step, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"unsafe_step", 2, xqlite_step},
     {"dirty_io_step_nif", 3, xqlite_multi_step, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"step_nif", 3, xqlite_multi_step},
 
+    {"get_autocommit", 1, xqlite_get_autocommit},
+
     {"interrupt", 1, xqlite_interrupt},
 
     {"dirty_io_fetch_all_nif", 2, xqlite_fetch_all, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"dirty_io_insert_all_nif", 4, xqlite_insert_all, ERL_NIF_DIRTY_JOB_IO_BOUND},
 
+    {"column_count", 1, xqlite_column_count},
+    {"column_name", 2, xqlite_column_name},
+    {"column_names", 1, xqlite_column_names},
+
     {"changes", 1, xqlite_changes64},
     {"total_changes", 1, xqlite_total_changes64},
-    {"clear_bindings", 2, xqlite_clear_bindings},
+    {"last_insert_rowid", 1, xqlite_last_insert_rowid},
+
     {"enable_load_extension_nif", 2, xqlite_enable_load_extension},
+
     {"sql", 1, xqlite_sql},
     {"expanded_sql", 1, xqlite_expanded_sql},
-    {"get_autocommit", 1, xqlite_get_autocommit},
-    {"last_insert_rowid", 1, xqlite_last_insert_rowid},
+
+    {"memory_used", 0, xqlite_memory_used},
 };
 
 ERL_NIF_INIT(Elixir.XQLite, nif_funcs, on_load, NULL, NULL, on_unload)
