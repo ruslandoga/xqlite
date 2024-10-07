@@ -7,6 +7,17 @@ BUILD  = $(MIX_APP_PATH)/obj
 LIB = $(PRIV)/xqlite_nif.so
 OBJ = $(SRC:c_src/%.c=$(BUILD)/%.o)
 
+ifeq ($(MIX_ENV), dev)
+    CFLAGS += -g
+    CXXFLAGS += -g
+else ifeq ($(MIX_ENV), test)
+    CFLAGS += -g
+    CXXFLAGS += -g
+else
+	CFLAGS += -O3 -DNDEBUG=1
+	CXXFLAGS += -O3 -DNDEBUG=1
+endif
+
 ifeq ($(KERNEL_NAME), Linux)
 	CFLAGS += -fPIC -fvisibility=hidden
 	LDFLAGS += -fPIC -shared
