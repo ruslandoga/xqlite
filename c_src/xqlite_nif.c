@@ -913,7 +913,6 @@ xqlite_column_name(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     return make_binary(env, (unsigned char *)name, strlen(name));
 }
 
-// TODO needed?
 static ERL_NIF_TERM
 xqlite_column_names(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
