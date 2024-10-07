@@ -696,6 +696,20 @@ xqlite_fetch_all(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     }
 }
 
+static ERL_NIF_TERM
+xqlite_changes(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(argc == 1);
+
+    db_t *db;
+    if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
+        return enif_make_badarg(env);
+
+    // TODO changes64
+    int changes = sqlite3_changes(db->db);
+    return enif_make_int(env, changes);
+}
+
 static void
 db_type_destructor(ErlNifEnv *env, void *arg)
 {
@@ -783,6 +797,8 @@ static ErlNifFunc nif_funcs[] = {
 
     {"dirty_io_fetch_all_nif", 2, xqlite_fetch_all, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"dirty_io_insert_all_nif", 4, xqlite_insert_all, ERL_NIF_DIRTY_JOB_IO_BOUND},
+
+    {"changes", 1, xqlite_changes},
 };
 
 ERL_NIF_INIT(Elixir.XQLite, nif_funcs, on_load, NULL, NULL, on_unload)

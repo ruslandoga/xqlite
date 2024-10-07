@@ -316,6 +316,21 @@ defmodule XQLite do
   defp process_type(:text), do: 3
   defp process_type(:blob), do: 4
 
+  @doc """
+  Returns the number of rows changed by the most recent statement.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readwrite])
+      iex> XQLite.step(db, XQLite.prepare(db, "CREATE TABLE users (name TEXT)"))
+      iex> XQLite.step(db, XQLite.prepare(db, "INSERT INTO users (name) VALUES ('Alice'), ('Bob')"))
+      iex> XQLite.changes(db)
+      2
+
+  """
+  @spec changes(db) :: integer
+  def changes(_db), do: :erlang.nif_error(:undef)
+
   @compile {:autoload, false}
   @on_load {:load_nif, 0}
 
