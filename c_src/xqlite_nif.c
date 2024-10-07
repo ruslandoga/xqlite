@@ -941,6 +941,56 @@ xqlite_column_names(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     return enif_make_list_from_array(env, columns, column_count);
 }
 
+static ERL_NIF_TERM
+xqlite_bind_parameter_count(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(argc == 1);
+
+    stmt_t *stmt;
+    if (!enif_get_resource(env, argv[0], stmt_type, (void **)&stmt))
+        return enif_make_badarg(env);
+
+    int bind_parameter_count = sqlite3_bind_parameter_count(stmt->stmt);
+    return enif_make_int(env, bind_parameter_count);
+}
+
+static ERL_NIF_TERM
+xqlite_bind_parameter_index(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(argc == 2);
+
+    stmt_t *stmt;
+    if (!enif_get_resource(env, argv[0], stmt_type, (void **)&stmt))
+        return enif_make_badarg(env);
+
+    ErlNifBinary name;
+    if (!enif_inspect_binary(env, argv[1], &name))
+        return enif_make_badarg(env);
+
+    int idx = sqlite3_bind_parameter_index(stmt->stmt, (char *)name.data);
+    return enif_make_int(env, idx);
+}
+
+static ERL_NIF_TERM
+xqlite_bind_parameter_name(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(argc == 2);
+
+    stmt_t *stmt;
+    if (!enif_get_resource(env, argv[0], stmt_type, (void **)&stmt))
+        return enif_make_badarg(env);
+
+    int idx;
+    if (!enif_get_int(env, argv[1], &idx))
+        return enif_make_badarg(env);
+
+    const char *name = sqlite3_bind_parameter_name(stmt->stmt, idx);
+    if (!name)
+        return am_nil;
+
+    return make_binary(env, (unsigned char *)name, strlen(name));
+}
+
 static ErlNifFunc nif_funcs[] = {
     {"dirty_io_open_nif", 2, xqlite_open, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"dirty_io_close_nif", 1, xqlite_close, ERL_NIF_DIRTY_JOB_IO_BOUND},
@@ -949,6 +999,9 @@ static ErlNifFunc nif_funcs[] = {
     {"finalize", 1, xqlite_finalize, ERL_NIF_DIRTY_JOB_CPU_BOUND},
     {"reset", 2, xqlite_reset, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
+    {"bind_parameter_count", 1, xqlite_bind_parameter_count},
+    {"bind_parameter_index_nif", 2, xqlite_bind_parameter_index},
+    {"bind_parameter_name", 2, xqlite_bind_parameter_name},
     {"bind_text", 4, xqlite_bind_text},
     {"bind_blob", 4, xqlite_bind_blob},
     {"bind_integer", 4, xqlite_bind_integer},

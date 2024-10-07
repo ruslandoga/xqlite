@@ -114,6 +114,55 @@ defmodule XQLite do
   def prepare(db, sql, flags), do: prepare_nif(db, sql, bor_prepare_flags(flags, 0))
 
   @doc """
+  Returns number of SQL parameters in a prepared statement.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT ?, ?")
+      iex> XQLite.bind_parameter_count(stmt)
+      2
+
+  """
+  @spec bind_parameter_count(stmt) :: integer
+  def bind_parameter_count(_stmt), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Returns number of SQL parameters in a prepared statement.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT sql FROM sqlite_master WHERE name = :name")
+      iex> XQLite.bind_parameter_index(stmt, ":name")
+      1
+
+  """
+  @spec bind_parameter_index(stmt, String.t()) :: integer
+  def bind_parameter_index(stmt, name) do
+    bind_parameter_index_nif(stmt, name <> <<0>>)
+  end
+
+  @doc """
+  Returns number of SQL parameters in a prepared statement.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT sql FROM sqlite_master WHERE name = :name")
+      iex> XQLite.bind_parameter_name(stmt, 1)
+      ":name"
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT ?")
+      iex> XQLite.bind_parameter_name(stmt, 1)
+      nil
+
+  """
+  @spec bind_parameter_name(stmt, integer) :: String.t() | nil
+  def bind_parameter_name(_stmt, _idx), do: :erlang.nif_error(:undef)
+
+  @doc """
   Binds a text value to a prepared statement.
 
   Example:
@@ -517,6 +566,7 @@ defmodule XQLite do
   defp dirty_io_close_nif(_db), do: :erlang.nif_error(:undef)
 
   defp prepare_nif(_db, _sql, _flags), do: :erlang.nif_error(:undef)
+  defp bind_parameter_index_nif(_stmt, _name), do: :erlang.nif_error(:undef)
 
   defp dirty_io_step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
   defp step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
