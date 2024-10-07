@@ -339,14 +339,11 @@ defmodule XQLite do
   Example:
 
       iex> db = XQLite.open(":memory:", [:readwrite])
-      iex> create = XQLite.prepare(db, "CREATE TABLE users (name TEXT)")
-      iex> XQLite.step(db, create)
-      iex> begin = XQLite.prepare(db, "BEGIN IMMEDIATE")
+      iex> XQLite.exec(db, "CREATE TABLE users (name TEXT)")
       iex> insert = XQLite.prepare(db, "INSERT INTO users (name) VALUES (?)")
-      iex> commit = XQLite.prepare(db, "COMMIT")
-      iex> XQLite.step(db, begin)
+      iex> XQLite.exec(db, "BEGIN IMMEDIATE")
       iex> XQLite.insert_all(db, insert, [:text], [["Alice"], [nil], ["Bob"]])
-      iex> XQLite.step(db, commit)
+      iex> XQLite.exec(db, "COMMIT")
 
   """
   @spec insert_all(db, stmt, [:integer | :float | :text | :blob], [row]) :: :ok
@@ -371,8 +368,8 @@ defmodule XQLite do
   Example:
 
       iex> db = XQLite.open(":memory:", [:readwrite])
-      iex> XQLite.step(db, XQLite.prepare(db, "CREATE TABLE users (name TEXT)"))
-      iex> XQLite.step(db, XQLite.prepare(db, "INSERT INTO users (name) VALUES ('Alice'), ('Bob')"))
+      iex> XQLite.exec(db, "CREATE TABLE users (name TEXT)")
+      iex> XQLite.exec(db, "INSERT INTO users (name) VALUES ('Alice'), ('Bob')")
       iex> XQLite.changes(db)
       2
 
@@ -386,9 +383,9 @@ defmodule XQLite do
   Example:
 
       iex> db = XQLite.open(":memory:", [:readwrite])
-      iex> XQLite.step(db, XQLite.prepare(db, "CREATE TABLE users (name TEXT)"))
-      iex> XQLite.step(db, XQLite.prepare(db, "INSERT INTO users (name) VALUES ('Alice'), ('Bob')"))
-      iex> XQLite.step(db, XQLite.prepare(db, "INSERT INTO users (name) VALUES ('Charlie')"))
+      iex> XQLite.exec(db, "CREATE TABLE users (name TEXT)")
+      iex> XQLite.exec(db, "INSERT INTO users (name) VALUES ('Alice'), ('Bob')")
+      iex> XQLite.exec(db, "INSERT INTO users (name) VALUES ('Charlie')")
       iex> XQLite.total_changes(db)
       3
 
@@ -470,7 +467,7 @@ defmodule XQLite do
       1
 
       iex> db = XQLite.open(":memory:", [:readwrite])
-      iex> XQLite.step(db, XQLite.prepare(db, "begin"))
+      iex> XQLite.exec(db, "begin")
       iex> XQLite.get_autocommit(db)
       0
 
@@ -484,8 +481,8 @@ defmodule XQLite do
   Example:
 
       iex> db = XQLite.open(":memory:", [:readwrite])
-      iex> XQLite.step(db, XQLite.prepare(db, "CREATE TABLE users (name TEXT)"))
-      iex> XQLite.step(db, XQLite.prepare(db, "INSERT INTO users (name) VALUES ('Alice'), ('Bob')"))
+      iex> XQLite.exec(db, "CREATE TABLE users (name TEXT)")
+      iex> XQLite.exec(db, "INSERT INTO users (name) VALUES ('Alice'), ('Bob')")
       iex> XQLite.last_insert_rowid(db)
       2
 
@@ -497,9 +494,6 @@ defmodule XQLite do
   Returns the number of bytes of memory currently outstanding (malloced but not freed).
 
   Example:
-
-      iex> XQLite.memory_used()
-      0
 
       iex> XQLite.open(":memory:", [:readonly])
       iex> memory_used = XQLite.memory_used()
@@ -552,6 +546,23 @@ defmodule XQLite do
   @spec column_names(stmt) :: [String.t() | nil]
   def column_names(_stmt), do: :erlang.nif_error(:undef)
 
+  @doc """
+  Executes a SQL statement.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readwrite])
+      iex> XQLite.exec(db, "CREATE TABLE users (name TEXT)")
+      iex> XQLite.exec(db, "INSERT INTO users (name) VALUES ('Alice'), ('Bob')")
+      iex> XQLite.fetch_all(db, XQLite.prepare(db, "SELECT rowid, name FROM users"))
+      [[1, "Alice"], [2, "Bob"]]
+
+  """
+  @spec exec(db, String.t()) :: :ok
+  def exec(db, sql) do
+    exec_nif(db, sql <> <<0>>)
+  end
+
   @compile {:autoload, false}
   @on_load {:load_nif, 0}
 
@@ -570,6 +581,7 @@ defmodule XQLite do
 
   defp dirty_io_step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
   defp step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
+  defp exec_nif(_db, _sql), do: :erlang.nif_error(:undef)
 
   defp enable_load_extension_nif(_db, _onoff), do: :erlang.nif_error(:undef)
 

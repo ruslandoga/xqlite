@@ -991,6 +991,26 @@ xqlite_bind_parameter_name(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     return make_binary(env, (unsigned char *)name, strlen(name));
 }
 
+static ERL_NIF_TERM
+xqlite_exec(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(argc == 2);
+
+    db_t *db;
+    if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
+        return enif_make_badarg(env);
+
+    ErlNifBinary sql;
+    if (!enif_inspect_binary(env, argv[1], &sql))
+        return enif_make_badarg(env);
+
+    int rc = sqlite3_exec(db->db, (char *)sql.data, NULL, NULL, NULL);
+    if (rc != SQLITE_OK)
+        return raise_sqlite3_error(env, rc, db->db);
+
+    return am_ok;
+}
+
 static ErlNifFunc nif_funcs[] = {
     {"dirty_io_open_nif", 2, xqlite_open, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"dirty_io_close_nif", 1, xqlite_close, ERL_NIF_DIRTY_JOB_IO_BOUND},
@@ -1013,6 +1033,7 @@ static ErlNifFunc nif_funcs[] = {
     {"unsafe_step", 2, xqlite_step},
     {"dirty_io_step_nif", 3, xqlite_multi_step, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"step_nif", 3, xqlite_multi_step},
+    {"exec_nif", 2, xqlite_exec, ERL_NIF_DIRTY_JOB_IO_BOUND},
 
     {"get_autocommit", 1, xqlite_get_autocommit},
 
