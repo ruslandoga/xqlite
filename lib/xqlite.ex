@@ -331,6 +331,70 @@ defmodule XQLite do
   @spec changes(db) :: integer
   def changes(_db), do: :erlang.nif_error(:undef)
 
+  @doc """
+  Resets all bindings on a prepared statement.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "SELECT ?")
+      iex> XQLite.bind_integer(db, stmt, 1, 42)
+      iex> XQLite.clear_bindings(db, stmt)
+      iex> XQLite.step(db, stmt, 2)
+      {:done, [[nil]]}
+
+  """
+  @spec clear_bindings(db, stmt) :: :ok
+  def clear_bindings(_db, _stmt), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Enables or disables extension loading.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> XQLite.enable_load_extension(db, true)
+      iex> XQLite.enable_load_extension(db, false)
+
+  """
+  @spec enable_load_extension(db, boolean) :: :ok
+  def enable_load_extension(db, onoff) do
+    case onoff do
+      true -> enable_load_extension_nif(db, 1)
+      false -> enable_load_extension_nif(db, 0)
+    end
+  end
+
+  @doc """
+  Returns the SQL text used to create a prepared statement.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "select ?")
+      iex> XQLite.bind_integer(db, stmt, 1, 42)
+      iex> XQLite.sql(stmt)
+      "select ?"
+
+  """
+  @spec sql(stmt) :: String.t()
+  def sql(_stmt), do: :erlang.nif_error(:undef)
+
+  @doc """
+  Returns the SQL text used to create a prepared statement with bound parameters expanded.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readonly])
+      iex> stmt = XQLite.prepare(db, "select ?")
+      iex> XQLite.bind_integer(db, stmt, 1, 42)
+      iex> XQLite.expanded_sql(stmt)
+      "select 42"
+
+  """
+  @spec expanded_sql(stmt) :: String.t()
+  def expanded_sql(_stmt), do: :erlang.nif_error(:undef)
+
   @compile {:autoload, false}
   @on_load {:load_nif, 0}
 
@@ -348,6 +412,8 @@ defmodule XQLite do
 
   defp dirty_io_step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
   defp step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
+
+  defp enable_load_extension_nif(_db, _onoff), do: :erlang.nif_error(:undef)
 
   defp dirty_io_fetch_all_nif(_db, _stmt), do: :erlang.nif_error(:undef)
   defp dirty_io_insert_all_nif(_db, _stmt, _types, _rows), do: :erlang.nif_error(:undef)

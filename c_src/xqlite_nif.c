@@ -27,6 +27,70 @@ typedef struct stmt
     sqlite3_stmt *stmt;
 } stmt_t;
 
+static void
+db_type_destructor(ErlNifEnv *env, void *arg)
+{
+    assert(env);
+    assert(arg);
+
+    db_t *db = (db_t *)arg;
+
+    if (db->db)
+    {
+        sqlite3_close_v2(db->db);
+        db->db = NULL;
+    }
+}
+
+static void
+stmt_type_destructor(ErlNifEnv *env, void *arg)
+{
+    assert(env);
+    assert(arg);
+
+    stmt_t *stmt = (stmt_t *)arg;
+
+    if (stmt->stmt)
+    {
+        sqlite3_finalize(stmt->stmt);
+        stmt->stmt = NULL;
+    }
+}
+
+static int
+on_load(ErlNifEnv *env, void **priv, ERL_NIF_TERM info)
+{
+    assert(env);
+
+    am_ok = enif_make_atom(env, "ok");
+    am_error = enif_make_atom(env, "error");
+    am_nil = enif_make_atom(env, "nil");
+    // TODO rename to alloc_error
+    am_out_of_memory = enif_make_atom(env, "out_of_memory");
+    am_done = enif_make_atom(env, "done");
+    am_row = enif_make_atom(env, "row");
+    am_rows = enif_make_atom(env, "rows");
+
+    sqlite3_config(SQLITE_CONFIG_GETMALLOC, &default_mem_methods);
+
+    db_type = enif_open_resource_type(env, "xqlite", "db_type", db_type_destructor, ERL_NIF_RT_CREATE, NULL);
+    if (!db_type)
+        return -1;
+
+    stmt_type = enif_open_resource_type(env, "xqlite", "stmt_type", stmt_type_destructor, ERL_NIF_RT_CREATE, NULL);
+    if (!stmt_type)
+        return -1;
+
+    return 0;
+}
+
+static void
+on_unload(ErlNifEnv *caller_env, void *priv_data)
+{
+    assert(caller_env);
+    sqlite3_config(SQLITE_CONFIG_MALLOC, &default_mem_methods);
+}
+
 static ERL_NIF_TERM
 make_binary(ErlNifEnv *env, const unsigned char *bytes, size_t size)
 {
@@ -710,68 +774,72 @@ xqlite_changes(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     return enif_make_int(env, changes);
 }
 
-static void
-db_type_destructor(ErlNifEnv *env, void *arg)
+static ERL_NIF_TERM
+xqlite_clear_bindings(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    assert(env);
-    assert(arg);
+    assert(argc == 2);
 
-    db_t *db = (db_t *)arg;
+    db_t *db;
+    if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
+        return enif_make_badarg(env);
 
-    if (db->db)
-    {
-        sqlite3_close_v2(db->db);
-        db->db = NULL;
-    }
+    stmt_t *stmt;
+    if (!enif_get_resource(env, argv[1], stmt_type, (void **)&stmt))
+        return enif_make_badarg(env);
+
+    int rc = sqlite3_clear_bindings(stmt->stmt);
+    if (rc != SQLITE_OK)
+        return raise_sqlite3_error(env, rc, db->db);
+
+    return am_ok;
 }
 
-static void
-stmt_type_destructor(ErlNifEnv *env, void *arg)
+static ERL_NIF_TERM
+xqlite_enable_load_extension(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    assert(env);
-    assert(arg);
+    assert(argc == 2);
 
-    stmt_t *stmt = (stmt_t *)arg;
+    db_t *db;
+    if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
+        return enif_make_badarg(env);
 
-    if (stmt->stmt)
-    {
-        sqlite3_finalize(stmt->stmt);
-        stmt->stmt = NULL;
-    }
+    int onoff;
+    if (!enif_get_int(env, argv[1], &onoff))
+        return enif_make_badarg(env);
+
+    int rc = sqlite3_enable_load_extension(db->db, onoff);
+    if (rc != SQLITE_OK)
+        return raise_sqlite3_error(env, rc, db->db);
+
+    return am_ok;
 }
 
-static int
-on_load(ErlNifEnv *env, void **priv, ERL_NIF_TERM info)
+static ERL_NIF_TERM
+xqlite_sql(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    assert(env);
+    assert(argc == 1);
 
-    am_ok = enif_make_atom(env, "ok");
-    am_error = enif_make_atom(env, "error");
-    am_nil = enif_make_atom(env, "nil");
-    // TODO rename to alloc_error
-    am_out_of_memory = enif_make_atom(env, "out_of_memory");
-    am_done = enif_make_atom(env, "done");
-    am_row = enif_make_atom(env, "row");
-    am_rows = enif_make_atom(env, "rows");
+    stmt_t *stmt;
+    if (!enif_get_resource(env, argv[0], stmt_type, (void **)&stmt))
+        return enif_make_badarg(env);
 
-    sqlite3_config(SQLITE_CONFIG_GETMALLOC, &default_mem_methods);
-
-    db_type = enif_open_resource_type(env, "xqlite", "db_type", db_type_destructor, ERL_NIF_RT_CREATE, NULL);
-    if (!db_type)
-        return -1;
-
-    stmt_type = enif_open_resource_type(env, "xqlite", "stmt_type", stmt_type_destructor, ERL_NIF_RT_CREATE, NULL);
-    if (!stmt_type)
-        return -1;
-
-    return 0;
+    const char *sql = sqlite3_sql(stmt->stmt);
+    return make_binary(env, (unsigned char *)sql, strlen(sql));
 }
 
-static void
-on_unload(ErlNifEnv *caller_env, void *priv_data)
+static ERL_NIF_TERM
+xqlite_expanded_sql(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
-    assert(caller_env);
-    sqlite3_config(SQLITE_CONFIG_MALLOC, &default_mem_methods);
+    assert(argc == 1);
+
+    stmt_t *stmt;
+    if (!enif_get_resource(env, argv[0], stmt_type, (void **)&stmt))
+        return enif_make_badarg(env);
+
+    const char *sql = sqlite3_expanded_sql(stmt->stmt);
+    ERL_NIF_TERM bin = make_binary(env, (unsigned char *)sql, strlen(sql));
+    sqlite3_free((void *)sql);
+    return bin;
 }
 
 static ErlNifFunc nif_funcs[] = {
@@ -799,6 +867,10 @@ static ErlNifFunc nif_funcs[] = {
     {"dirty_io_insert_all_nif", 4, xqlite_insert_all, ERL_NIF_DIRTY_JOB_IO_BOUND},
 
     {"changes", 1, xqlite_changes},
+    {"clear_bindings", 2, xqlite_clear_bindings},
+    {"enable_load_extension_nif", 2, xqlite_enable_load_extension},
+    {"sql", 1, xqlite_sql},
+    {"expanded_sql", 1, xqlite_expanded_sql},
 };
 
 ERL_NIF_INIT(Elixir.XQLite, nif_funcs, on_load, NULL, NULL, on_unload)
