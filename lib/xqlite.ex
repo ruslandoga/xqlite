@@ -395,6 +395,24 @@ defmodule XQLite do
   @spec expanded_sql(stmt) :: String.t()
   def expanded_sql(_stmt), do: :erlang.nif_error(:undef)
 
+  @doc """
+  Tests for auto-commit mode.
+
+  Example:
+
+      iex> db = XQLite.open(":memory:", [:readwrite])
+      iex> XQLite.get_autocommit(db)
+      1
+
+      iex> db = XQLite.open(":memory:", [:readwrite])
+      iex> XQLite.step(db, XQLite.prepare(db, "BEGIN IMMEDIATE"))
+      iex> XQLite.get_autocommit(db)
+      0
+
+  """
+  @spec get_autocommit(db) :: integer
+  def get_autocommit(_db), do: :erlang.nif_error(:undef)
+
   @compile {:autoload, false}
   @on_load {:load_nif, 0}
 

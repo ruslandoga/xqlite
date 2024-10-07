@@ -842,6 +842,19 @@ xqlite_expanded_sql(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
     return bin;
 }
 
+static ERL_NIF_TERM
+xqlite_get_autocommit(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+    assert(argc == 1);
+
+    db_t *db;
+    if (!enif_get_resource(env, argv[0], db_type, (void **)&db))
+        return enif_make_badarg(env);
+
+    int autocommit = sqlite3_get_autocommit(db->db);
+    return enif_make_int(env, autocommit);
+}
+
 static ErlNifFunc nif_funcs[] = {
     {"dirty_io_open_nif", 2, xqlite_open, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"dirty_io_close_nif", 1, xqlite_close, ERL_NIF_DIRTY_JOB_IO_BOUND},
@@ -871,6 +884,7 @@ static ErlNifFunc nif_funcs[] = {
     {"enable_load_extension_nif", 2, xqlite_enable_load_extension},
     {"sql", 1, xqlite_sql},
     {"expanded_sql", 1, xqlite_expanded_sql},
+    {"get_autocommit", 1, xqlite_get_autocommit},
 };
 
 ERL_NIF_INIT(Elixir.XQLite, nif_funcs, on_load, NULL, NULL, on_unload)
