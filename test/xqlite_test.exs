@@ -23,9 +23,13 @@ defmodule XQLiteTest do
   describe "db destructor" do
     test "closes db on gc" do
       {pid, monitor} =
-        :proc_lib.spawn_opt(fn -> XQLite.open(":memory:", [:readonly]) end, [:monitor])
+        :proc_lib.spawn_opt(
+          fn -> XQLite.open(":memory:", [:readonly]) end,
+          [:monitor]
+        )
 
       assert_receive {:DOWN, ^monitor, :process, ^pid, :normal}
+      await_until(fn -> XQLite.memory_used() == 0 end)
       assert XQLite.memory_used() == 0
     end
   end
@@ -44,6 +48,7 @@ defmodule XQLiteTest do
       assert :ok = XQLite.close(db)
       assert XQLite.memory_used() > 0
       assert :ok = XQLite.finalize(stmt)
+      await_until(fn -> XQLite.memory_used() == 0 end)
       assert XQLite.memory_used() == 0
     end
   end
@@ -73,6 +78,7 @@ defmodule XQLiteTest do
         )
 
       assert_receive {:DOWN, ^monitor, :process, ^pid, :normal}
+      await_until(fn -> XQLite.memory_used() == 0 end)
       assert XQLite.memory_used() == 0
     end
   end
@@ -234,5 +240,21 @@ defmodule XQLiteTest do
 
   defp prepare_fetch_all(db, sql) do
     XQLite.fetch_all(XQLite.prepare(db, sql))
+  end
+
+  defp await_until(f, timeout \\ nil) do
+    {pid, monitor} = :proc_lib.spawn_opt(fn -> run_until(f) end, [:link, :monitor])
+    assert_receive {:DOWN, ^monitor, :process, ^pid, _reason}, timeout
+  end
+
+  defp run_until(f) do
+    case f.() do
+      true ->
+        :done
+
+      false ->
+        :timer.sleep(20)
+        run_until(f)
+    end
   end
 end
