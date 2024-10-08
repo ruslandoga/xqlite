@@ -35,12 +35,7 @@ select i, 'hello' || i, null from cte
 """
 
 Benchee.run(
-  %{
-    "fetch_all" => fn resource ->
-      %{db: db, stmt: stmt} = resource
-      XQLite.fetch_all(db, stmt)
-    end
-  },
+  %{"fetch_all" => fn %{stmt: stmt} -> XQLite.fetch_all(stmt) end},
   inputs: %{
     "10 rows" => 10,
     "100 rows" => 100,

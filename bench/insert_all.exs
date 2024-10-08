@@ -38,10 +38,7 @@ resource = fn input ->
   if File.exists?(path <> "-shm"), do: File.rm!(path <> "-shm")
 
   db = XQLite.open(path, flags)
-
-  create = XQLite.prepare(db, create)
-  :done = XQLite.step(db, create)
-  XQLite.finalize(create)
+  XQLite.exec(db, create)
 
   begin = XQLite.prepare(db, "begin immediate", [:persistent])
   insert = XQLite.prepare(db, insert, [:persistent])
@@ -49,14 +46,14 @@ resource = fn input ->
 
   %{
     before_scenario: fn ->
-      :done = XQLite.step(db, begin)
+      :done = XQLite.step(begin)
     end,
     db: db,
     insert: insert,
     types: types,
     rows: rows,
     after_scenario: fn ->
-      :done = XQLite.step(db, rollback)
+      :done = XQLite.step(rollback)
       XQLite.finalize(begin)
       XQLite.finalize(insert)
       XQLite.finalize(rollback)
@@ -103,8 +100,8 @@ inputs = [
 Benchee.run(
   %{
     "insert_all" => fn input ->
-      %{db: db, insert: insert, types: types, rows: rows} = input
-      XQLite.insert_all(db, insert, types, rows)
+      %{insert: insert, types: types, rows: rows} = input
+      XQLite.insert_all(insert, types, rows)
     end
   },
   inputs:

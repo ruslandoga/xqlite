@@ -169,11 +169,12 @@ defmodule XQLite do
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_text(db, stmt, 1, "Alice")
+      iex> XQLite.bind_text(stmt, 1, "Alice")
+      :ok
 
   """
-  @spec bind_text(db, stmt, non_neg_integer, String.t()) :: :ok
-  def bind_text(_db, _stmt, _index, _text), do: :erlang.nif_error(:undef)
+  @spec bind_text(stmt, non_neg_integer, String.t()) :: :ok
+  def bind_text(_stmt, _index, _text), do: :erlang.nif_error(:undef)
 
   @doc """
   Binds a blob value to a prepared statement.
@@ -182,11 +183,12 @@ defmodule XQLite do
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_blob(db, stmt, 1, <<0, 0, 0>>)
+      iex> XQLite.bind_blob(stmt, 1, <<0, 0, 0>>)
+      :ok
 
   """
-  @spec bind_blob(db, stmt, non_neg_integer, binary) :: :ok
-  def bind_blob(_db, _stmt, _index, _blob), do: :erlang.nif_error(:undef)
+  @spec bind_blob(stmt, non_neg_integer, binary) :: :ok
+  def bind_blob(_stmt, _index, _blob), do: :erlang.nif_error(:undef)
 
   @doc """
   Binds an integer value to a prepared statement.
@@ -195,11 +197,12 @@ defmodule XQLite do
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_integer(db, stmt, 1, 42)
+      iex> XQLite.bind_integer(stmt, 1, 42)
+      :ok
 
   """
-  @spec bind_integer(db, stmt, non_neg_integer, integer) :: :ok
-  def bind_integer(_db, _stmt, _index, _integer), do: :erlang.nif_error(:undef)
+  @spec bind_integer(stmt, non_neg_integer, integer) :: :ok
+  def bind_integer(_stmt, _index, _integer), do: :erlang.nif_error(:undef)
 
   @doc """
   Binds a float value to a prepared statement.
@@ -208,11 +211,12 @@ defmodule XQLite do
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_float(db, stmt, 1, 0.334)
+      iex> XQLite.bind_float(stmt, 1, 0.334)
+      :ok
 
   """
-  @spec bind_float(db, stmt, non_neg_integer, float) :: :ok
-  def bind_float(_db, _stmt, _index, _float), do: :erlang.nif_error(:undef)
+  @spec bind_float(stmt, non_neg_integer, float) :: :ok
+  def bind_float(_stmt, _index, _float), do: :erlang.nif_error(:undef)
 
   @doc """
   Binds a null value to a prepared statement.
@@ -221,11 +225,12 @@ defmodule XQLite do
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_null(db, stmt, 1)
+      iex> XQLite.bind_null(stmt, 1)
+      :ok
 
   """
-  @spec bind_null(db, stmt, non_neg_integer) :: :ok
-  def bind_null(_db, _stmt, _index), do: :erlang.nif_error(:undef)
+  @spec bind_null(stmt, non_neg_integer) :: :ok
+  def bind_null(_stmt, _index), do: :erlang.nif_error(:undef)
 
   @doc """
   Resets a prepared statement using [sqlite3_reset()](https://www.sqlite.org/c3ref/reset.html)
@@ -234,16 +239,16 @@ defmodule XQLite do
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_integer(db, stmt, 1, 42)
-      iex> XQLite.step(db, stmt, 2)
-      iex> XQLite.reset(db, stmt)
-      iex> XQLite.bind_text(db, stmt, 1, "answer")
-      iex> XQLite.step(db, stmt, 2)
+      iex> XQLite.bind_integer(stmt, 1, 42)
+      iex> XQLite.step(stmt, 2)
+      iex> XQLite.reset(stmt)
+      iex> XQLite.bind_text(stmt, 1, "answer")
+      iex> XQLite.step(stmt, 2)
       {:done, [["answer"]]}
 
   """
-  @spec reset(db, stmt) :: :ok
-  def reset(_db, _stmt), do: :erlang.nif_error(:undef)
+  @spec reset(stmt) :: :ok
+  def reset(_stmt), do: :erlang.nif_error(:undef)
 
   @doc """
   Releases resources associated with a prepared statement.
@@ -265,16 +270,16 @@ defmodule XQLite do
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT 1")
-      iex> XQLite.step(db, stmt)
+      iex> XQLite.step(stmt)
       {:row, [1]}
 
   """
-  @spec step(db, stmt) :: {:row, row} | :done
-  def step(_db, _stmt), do: :erlang.nif_error(:undef)
+  @spec step(stmt) :: {:row, row} | :done
+  def step(_stmt), do: :erlang.nif_error(:undef)
 
-  @doc "Same as `step/2` but runs on a main scheduler."
-  @spec unsafe_step(db, stmt) :: {:row, row} | :done
-  def unsafe_step(_db, _stmt), do: :erlang.nif_error(:undef)
+  @doc "Same as `step/2` but runs on a regular scheduler."
+  @spec unsafe_step(stmt) :: {:row, row} | :done
+  def unsafe_step(_stmt), do: :erlang.nif_error(:undef)
 
   @doc """
   Executes a prepared statement `count` times.
@@ -283,21 +288,21 @@ defmodule XQLite do
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "select 1")
-      iex> XQLite.step(db, stmt, 2)
+      iex> XQLite.step(stmt, 2)
       {:done, [[1]]}
 
   """
-  @spec step(db, stmt, non_neg_integer) :: {:rows | :done, [row]}
-  def step(db, stmt, count) do
-    with {tag, rows} <- dirty_io_step_nif(db, stmt, count) do
+  @spec step(stmt, non_neg_integer) :: {:rows | :done, [row]}
+  def step(stmt, count) do
+    with {tag, rows} <- dirty_io_step_nif(stmt, count) do
       {tag, :lists.reverse(rows)}
     end
   end
 
-  @doc "Same as `step/3` but runs on a main scheduler."
-  @spec unsafe_step(db, stmt, non_neg_integer) :: {:rows | :done, [row]}
-  def unsafe_step(db, stmt, count) do
-    with {tag, rows} <- step_nif(db, stmt, count) do
+  @doc "Same as `step/3` but runs on a regular scheduler."
+  @spec unsafe_step(stmt, non_neg_integer) :: {:rows | :done, [row]}
+  def unsafe_step(stmt, count) do
+    with {tag, rows} <- step_nif(stmt, count) do
       {tag, :lists.reverse(rows)}
     end
   end
@@ -310,8 +315,8 @@ defmodule XQLite do
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "with recursive c(x) as (values(1) union all select x+1 from c where x < 10000000000000) select sum(x) from c")
       iex> spawn(fn -> :timer.sleep(10); XQLite.interrupt(db) end)
-      iex> XQLite.step(db, stmt)
-      ** (ErlangError) Erlang error: {:error, 9, ~c"interrupted"}
+      iex> XQLite.step(stmt)
+      ** (ErlangError) Erlang error: {:xqlite, 9, ~c"interrupted"}
 
   """
   @spec interrupt(db) :: :ok
@@ -324,13 +329,13 @@ defmodule XQLite do
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT 1")
-      iex> XQLite.fetch_all(db, stmt)
+      iex> XQLite.fetch_all(stmt)
       [[1]]
 
   """
-  @spec fetch_all(db, stmt) :: [row]
-  def fetch_all(db, stmt) do
-    :lists.reverse(dirty_io_fetch_all_nif(db, stmt))
+  @spec fetch_all(stmt) :: [row]
+  def fetch_all(stmt) do
+    :lists.reverse(dirty_io_fetch_all_nif(stmt))
   end
 
   @doc """
@@ -342,13 +347,21 @@ defmodule XQLite do
       iex> XQLite.exec(db, "CREATE TABLE users (name TEXT)")
       iex> insert = XQLite.prepare(db, "INSERT INTO users (name) VALUES (?)")
       iex> XQLite.exec(db, "BEGIN IMMEDIATE")
-      iex> XQLite.insert_all(db, insert, [:text], [["Alice"], [nil], ["Bob"]])
-      iex> XQLite.exec(db, "COMMIT")
+      iex> try do
+      ...>   XQLite.insert_all(insert, [:text], [["Alice"], [nil], ["Bob"]])
+      ...> rescue
+      ...>   e ->
+      ...>     XQLite.exec(db, "ROLLBACK")
+      ...>     reraise(e, __STACKTRACE__)
+      ...> else
+      ...>   _ ->
+      ...>     XQLite.exec(db, "COMMIT")
+      ...> end
 
   """
-  @spec insert_all(db, stmt, [:integer | :float | :text | :blob], [row]) :: :ok
-  def insert_all(db, stmt, types, rows) do
-    dirty_io_insert_all_nif(db, stmt, process_types(types), rows)
+  @spec insert_all(stmt, [:integer | :float | :text | :blob], [row]) :: :done
+  def insert_all(stmt, types, rows) do
+    dirty_io_insert_all_nif(stmt, process_types(types), rows)
   end
 
   defp process_types([type | types]) do
@@ -400,14 +413,14 @@ defmodule XQLite do
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_integer(db, stmt, 1, 42)
-      iex> XQLite.clear_bindings(db, stmt)
-      iex> XQLite.step(db, stmt, 2)
+      iex> XQLite.bind_integer(stmt, 1, 42)
+      iex> XQLite.clear_bindings(stmt)
+      iex> XQLite.step(stmt, 2)
       {:done, [[nil]]}
 
   """
-  @spec clear_bindings(db, stmt) :: :ok
-  def clear_bindings(_db, _stmt), do: :erlang.nif_error(:undef)
+  @spec clear_bindings(stmt) :: :ok
+  def clear_bindings(_stmt), do: :erlang.nif_error(:undef)
 
   @doc """
   Enables or disables extension loading.
@@ -434,7 +447,7 @@ defmodule XQLite do
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "select ?")
-      iex> XQLite.bind_integer(db, stmt, 1, 42)
+      iex> XQLite.bind_integer(stmt, 1, 42)
       iex> XQLite.sql(stmt)
       "select ?"
 
@@ -449,7 +462,7 @@ defmodule XQLite do
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "select ?")
-      iex> XQLite.bind_integer(db, stmt, 1, 42)
+      iex> XQLite.bind_integer(stmt, 1, 42)
       iex> XQLite.expanded_sql(stmt)
       "select 42"
 
@@ -494,6 +507,9 @@ defmodule XQLite do
   Returns the number of bytes of memory currently outstanding (malloced but not freed).
 
   Example:
+
+      iex> XQLite.memory_used()
+      0
 
       iex> XQLite.open(":memory:", [:readonly])
       iex> memory_used = XQLite.memory_used()
@@ -554,7 +570,7 @@ defmodule XQLite do
       iex> db = XQLite.open(":memory:", [:readwrite])
       iex> XQLite.exec(db, "CREATE TABLE users (name TEXT)")
       iex> XQLite.exec(db, "INSERT INTO users (name) VALUES ('Alice'), ('Bob')")
-      iex> XQLite.fetch_all(db, XQLite.prepare(db, "SELECT rowid, name FROM users"))
+      iex> XQLite.fetch_all(XQLite.prepare(db, "SELECT rowid, name FROM users"))
       [[1, "Alice"], [2, "Bob"]]
 
   """
@@ -579,12 +595,12 @@ defmodule XQLite do
   defp prepare_nif(_db, _sql, _flags), do: :erlang.nif_error(:undef)
   defp bind_parameter_index_nif(_stmt, _name), do: :erlang.nif_error(:undef)
 
-  defp dirty_io_step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
-  defp step_nif(_db, _stmt, _count), do: :erlang.nif_error(:undef)
+  defp dirty_io_step_nif(_stmt, _count), do: :erlang.nif_error(:undef)
+  defp step_nif(_stmt, _count), do: :erlang.nif_error(:undef)
   defp exec_nif(_db, _sql), do: :erlang.nif_error(:undef)
 
   defp enable_load_extension_nif(_db, _onoff), do: :erlang.nif_error(:undef)
 
-  defp dirty_io_fetch_all_nif(_db, _stmt), do: :erlang.nif_error(:undef)
-  defp dirty_io_insert_all_nif(_db, _stmt, _types, _rows), do: :erlang.nif_error(:undef)
+  defp dirty_io_fetch_all_nif(_stmt), do: :erlang.nif_error(:undef)
+  defp dirty_io_insert_all_nif(_stmt, _types, _rows), do: :erlang.nif_error(:undef)
 end

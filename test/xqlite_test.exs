@@ -40,7 +40,7 @@ defmodule XQLiteTest do
     test "prepares a statement", %{db: db} do
       stmt = XQLite.prepare(db, "select 1 + 1, '🤷‍♂️'", [:persistent])
       on_exit(fn -> XQLite.finalize(stmt) end)
-      assert {:row, [2, "🤷‍♂️"]} = XQLite.unsafe_step(db, stmt)
+      assert {:row, [2, "🤷‍♂️"]} = XQLite.unsafe_step(stmt)
     end
   end
 
@@ -68,14 +68,14 @@ defmodule XQLiteTest do
       {:ok, db: db, stmt: stmt}
     end
 
-    property "integer, float, text, blob, and null", %{db: db, stmt: stmt} do
+    property "integer, float, text, blob, and null", %{stmt: stmt} do
       check all(integer <- integer(), float <- float(), binary <- binary()) do
-        XQLite.bind_integer(db, stmt, 1, integer)
-        XQLite.bind_float(db, stmt, 2, float)
-        XQLite.bind_text(db, stmt, 3, binary)
-        XQLite.bind_blob(db, stmt, 4, binary)
-        XQLite.bind_null(db, stmt, 5)
-        assert [[^integer, ^float, ^binary, ^binary, nil]] = XQLite.fetch_all(db, stmt)
+        XQLite.bind_integer(stmt, 1, integer)
+        XQLite.bind_float(stmt, 2, float)
+        XQLite.bind_text(stmt, 3, binary)
+        XQLite.bind_blob(stmt, 4, binary)
+        XQLite.bind_null(stmt, 5)
+        assert [[^integer, ^float, ^binary, ^binary, nil]] = XQLite.fetch_all(stmt)
       end
     end
   end
@@ -91,9 +91,9 @@ defmodule XQLiteTest do
       {:ok, db: db, stmt: stmt}
     end
 
-    test "binds integers larger than INT32_MAX", %{db: db, stmt: stmt} do
-      XQLite.bind_integer(db, stmt, 1, 0xFFFFFFFF + 1)
-      assert {:row, [0x100000000]} = XQLite.unsafe_step(db, stmt)
+    test "binds integers larger than INT32_MAX", %{stmt: stmt} do
+      XQLite.bind_integer(stmt, 1, 0xFFFFFFFF + 1)
+      assert {:row, [0x100000000]} = XQLite.unsafe_step(stmt)
     end
   end
 
@@ -108,9 +108,9 @@ defmodule XQLiteTest do
       {:ok, db: db, stmt: stmt}
     end
 
-    test "binds emojis", %{db: db, stmt: stmt} do
-      XQLite.bind_text(db, stmt, 1, "hello 👋 world 🌏")
-      assert {:row, ["hello 👋 world 🌏"]} = XQLite.unsafe_step(db, stmt)
+    test "binds emojis", %{stmt: stmt} do
+      XQLite.bind_text(stmt, 1, "hello 👋 world 🌏")
+      assert {:row, ["hello 👋 world 🌏"]} = XQLite.unsafe_step(stmt)
     end
   end
 
@@ -132,15 +132,15 @@ defmodule XQLiteTest do
       {:ok, db: db, stmt: stmt}
     end
 
-    test "fetches <count> rows", %{db: db, stmt: stmt} do
-      assert {:rows, [[1]]} = XQLite.step(db, stmt, 1)
-      assert {:rows, [[2], [3]]} = XQLite.step(db, stmt, 2)
-      assert {:rows, [[4], [5], [6]]} = XQLite.step(db, stmt, 3)
+    test "fetches <count> rows", %{stmt: stmt} do
+      assert {:rows, [[1]]} = XQLite.step(stmt, 1)
+      assert {:rows, [[2], [3]]} = XQLite.step(stmt, 2)
+      assert {:rows, [[4], [5], [6]]} = XQLite.step(stmt, 3)
 
-      assert {:done, rows} = XQLite.step(db, stmt, 94 + 1)
+      assert {:done, rows} = XQLite.step(stmt, 94 + 1)
       assert length(rows) == 94
 
-      assert {:done, rows} = XQLite.step(db, stmt, 100 + 1)
+      assert {:done, rows} = XQLite.step(stmt, 100 + 1)
       assert length(rows) == 100
     end
   end
@@ -171,7 +171,7 @@ defmodule XQLiteTest do
       {:ok, db: db, stmt: stmt}
     end
 
-    test "fetches all rows", %{db: db, stmt: stmt} do
+    test "fetches all rows", %{stmt: stmt} do
       assert [
                [1, 0.3333333333333333, "hello1", <<0, 0, 0>>, nil],
                [2, 0.6666666666666666, "hello2", <<0, 0, 0>>, nil],
@@ -180,7 +180,7 @@ defmodule XQLiteTest do
                [5, 1.6666666666666667, "hello5", <<0, 0, 0>>, nil],
                [6, 2.0, "hello6", <<0, 0, 0>>, nil]
                | rest
-             ] = XQLite.fetch_all(db, stmt)
+             ] = XQLite.fetch_all(stmt)
 
       assert length(rest) == 94
     end
@@ -208,9 +208,9 @@ defmodule XQLiteTest do
         [nil, nil, nil, nil]
       ]
 
-      :done = exec(db, "begin immediate")
-      assert :ok = XQLite.insert_all(db, insert, types, rows)
-      :done = exec(db, "commit")
+      assert :done = exec(db, "begin immediate")
+      assert :done = XQLite.insert_all(insert, types, rows)
+      assert :done = exec(db, "commit")
 
       assert prepare_fetch_all(db, "select rowid, * from test order by rowid") == [
                [1, 1, 0.3, "Alice 🤦‍♀️", <<0>>],
@@ -224,12 +224,12 @@ defmodule XQLiteTest do
   defp exec(db, sql) do
     stmt = XQLite.prepare(db, sql)
     on_exit(fn -> XQLite.finalize(stmt) end)
-    XQLite.step(db, stmt)
+    XQLite.step(stmt)
   end
 
   defp prepare_fetch_all(db, sql) do
     select = XQLite.prepare(db, sql)
     on_exit(fn -> XQLite.finalize(select) end)
-    XQLite.fetch_all(db, select)
+    XQLite.fetch_all(select)
   end
 end

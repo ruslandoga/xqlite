@@ -6,21 +6,27 @@
 # bind_parameter_index        4.43 M      225.91 ns  ±2121.83%         208 ns         292 ns
 # named bind_null             3.01 M      332.51 ns  ±4532.92%         250 ns         334 ns
 
-db = XQLite.open(":memory:", [:readonly, :nomutex])
-stmt = XQLite.prepare(db, "select :value")
-
 Benchee.run(
   %{
-    "bind_parameter_index" => fn ->
+    "bind_parameter_index" => fn %{stmt: stmt} ->
       XQLite.bind_parameter_index(stmt, ":value")
     end,
-    "named bind_null" => fn ->
-      XQLite.bind_null(db, stmt, XQLite.bind_parameter_index(stmt, ":value"))
+    "named bind_null" => fn %{stmt: stmt} ->
+      XQLite.bind_null(stmt, XQLite.bind_parameter_index(stmt, ":value"))
     end,
-    "bind_null" => fn ->
-      XQLite.bind_null(db, stmt, 1)
+    "bind_null" => fn %{stmt: stmt} ->
+      XQLite.bind_null(stmt, 1)
     end
   },
+  before_scenario: fn _input ->
+    db = XQLite.open(":memory:", [:readonly, :nomutex])
+    stmt = XQLite.prepare(db, "select :value")
+    %{db: db, stmt: stmt}
+  end,
+  after_scenario: fn %{db: db, stmt: stmt} ->
+    XQLite.finalize(stmt)
+    XQLite.close(db)
+  end,
   # https://github.com/bencheeorg/benchee/issues/389#issuecomment-1801511676
   time: 1
 )
