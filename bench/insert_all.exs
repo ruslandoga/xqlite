@@ -1,5 +1,5 @@
-# Commit: c7cdc431196b6778227e4b4931ac70324d0364a2
-# Date: Fri Oct  4 12:11:07 +07 2024
+# Commit: c4f5c0b33655b5bfca370c2ee719173365a1a7e3
+# Date: Tue Oct  8 14:38:11 +07 2024
 
 # Operating System: macOS
 # CPU Information: Apple M2
@@ -11,19 +11,19 @@
 
 # ##### With input path: "./bench/insert_all.db", types: 2, rows: 1000 #####
 # Name                 ips        average  deviation         median         99th %
-# insert_all        4.04 K      247.40 μs    ±31.95%         243 μs      275.67 μs
+# insert_all        4.26 K      234.89 μs    ±64.63%      221.08 μs      600.85 μs
 
 # ##### With input path: "./bench/insert_all.db", types: 2, rows: 3 #####
 # Name                 ips        average  deviation         median         99th %
-# insert_all      547.12 K        1.83 μs   ±244.99%        1.75 μs        3.50 μs
+# insert_all      559.54 K        1.79 μs   ±235.65%        1.67 μs        3.33 μs
 
 # ##### With input path: ":memory:", types: 2, rows: 1000 #####
 # Name                 ips        average  deviation         median         99th %
-# insert_all        4.12 K      242.43 μs    ±12.30%      239.50 μs      273.71 μs
+# insert_all        4.53 K      220.94 μs    ±21.49%      217.96 μs      252.00 μs
 
 # ##### With input path: ":memory:", types: 2, rows: 3 #####
 # Name                 ips        average  deviation         median         99th %
-# insert_all      553.43 K        1.81 μs   ±104.28%        1.79 μs        2.42 μs
+# insert_all      572.67 K        1.75 μs   ±178.74%        1.67 μs        2.21 μs
 
 resource = fn input ->
   path = Keyword.fetch!(input, :path)

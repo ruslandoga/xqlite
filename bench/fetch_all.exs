@@ -1,5 +1,5 @@
-# Commit: 4ba792923b90bb1daa66671e309348508ba34fd3
-# Date: Fri Oct  4 14:15:11 +07 2024
+# Commit: c4f5c0b33655b5bfca370c2ee719173365a1a7e3
+# Date: Tue Oct  8 14:37:01 +07 2024
 
 # Operating System: macOS
 # CPU Information: Apple M2
@@ -11,19 +11,19 @@
 
 # ##### With input 10 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all      245.23 K        4.08 μs   ±197.25%           4 μs        5.50 μs
+# fetch_all      247.83 K        4.04 μs   ±199.44%        3.92 μs        5.29 μs
 
 # ##### With input 100 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all       37.06 K       26.99 μs    ±15.49%       27.67 μs       36.08 μs
+# fetch_all       37.68 K       26.54 μs    ±12.50%       27.42 μs       35.67 μs
 
 # ##### With input 1000 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all        4.96 K      201.76 μs     ±5.17%      201.42 μs      232.77 μs
+# fetch_all        5.08 K      196.73 μs     ±5.33%      195.40 μs      221.98 μs
 
 # ##### With input 10000 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all        532.55        1.88 ms     ±4.70%        1.83 ms        2.17 ms
+# fetch_all        549.36        1.82 ms     ±4.28%        1.77 ms        1.98 ms
 
 sql = """
 with recursive cte(i) as (
