@@ -20,7 +20,8 @@ defmodule XQLite.MixProject do
     [
       {:benchee, "~> 1.3", only: :bench},
       {:elixir_make, "~> 0.8", runtime: false},
-      {:stream_data, "~> 1.1", only: :test}
+      {:stream_data, "~> 1.1", only: :test},
+      {:ex_doc, "~> 0.34", only: :docs}
     ]
   end
 end

@@ -1,5 +1,5 @@
 defmodule XQLite do
-  @moduledoc "SQLite for Elixir"
+  @moduledoc "SQLite bindings for Elixir"
 
   @type db :: reference
   @type stmt :: reference
@@ -63,8 +63,6 @@ defmodule XQLite do
   @doc """
   Opens a database using [sqlite3_open_v2()](https://www.sqlite.org/c3ref/open.html)
 
-  Example:
-
       iex> _writer = XQLite.open("test.db", [:readwrite, :create, :wal, :exrescode])
       iex> _reader = XQLite.open("test.db", [:readonly, :exrescode])
       iex> _memory = XQLite.open(":memory:", [:readwrite])
@@ -79,8 +77,6 @@ defmodule XQLite do
 
   @doc """
   Closes a database using [sqlite3_close_v2()](https://www.sqlite.org/c3ref/close.html)
-
-  Example:
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> XQLite.close(db)
@@ -119,8 +115,6 @@ defmodule XQLite do
   @doc """
   Prepares a statement using [sqlite3_prepare_v3()](https://www.sqlite.org/c3ref/prepare.html)
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> XQLite.prepare(db, "SELECT ?", [:persistent])
 
@@ -133,8 +127,6 @@ defmodule XQLite do
   @doc """
   Returns number of SQL parameters in a prepared statement.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?, ?")
       iex> XQLite.bind_parameter_count(stmt)
@@ -145,9 +137,7 @@ defmodule XQLite do
   def bind_parameter_count(_stmt), do: :erlang.nif_error(:undef)
 
   @doc """
-  Returns number of SQL parameters in a prepared statement.
-
-  Example:
+  Returns the index of a named parameter in a prepared statement.
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT sql FROM sqlite_master WHERE name = :name")
@@ -163,18 +153,16 @@ defmodule XQLite do
   defp bind_parameter_index_nif(_stmt, _name), do: :erlang.nif_error(:undef)
 
   @doc """
-  Returns number of SQL parameters in a prepared statement.
-
-  Example:
+  Returns the name of a parameter in a prepared statement.
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT sql FROM sqlite_master WHERE name = :name")
-      iex> XQLite.bind_parameter_name(stmt, _at = 1)
+      iex> XQLite.bind_parameter_name(stmt, 1)
       ":name"
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_parameter_name(stmt, _at = 1)
+      iex> XQLite.bind_parameter_name(stmt, 1)
       nil
 
   """
@@ -184,11 +172,9 @@ defmodule XQLite do
   @doc """
   Binds a text value to a prepared statement.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_text(stmt, _at = 1, _to = "Alice")
+      iex> XQLite.bind_text(stmt, 1, "Alice")
       :ok
 
   """
@@ -198,11 +184,9 @@ defmodule XQLite do
   @doc """
   Binds a blob value to a prepared statement.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_blob(stmt, _at = 1, _to = <<0, 0, 0>>)
+      iex> XQLite.bind_blob(stmt, 1, <<0, 0, 0>>)
       :ok
 
   """
@@ -212,11 +196,9 @@ defmodule XQLite do
   @doc """
   Binds an integer value to a prepared statement.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_integer(stmt, _at = 1, _to = 42)
+      iex> XQLite.bind_integer(stmt, 1, 42)
       :ok
 
   """
@@ -226,11 +208,9 @@ defmodule XQLite do
   @doc """
   Binds a float value to a prepared statement.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_float(stmt, _at = 1, _to = 3.14)
+      iex> XQLite.bind_float(stmt, 1, 3.14)
       :ok
 
   """
@@ -240,11 +220,9 @@ defmodule XQLite do
   @doc """
   Binds a null value to a prepared statement.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_null(stmt, _at = 1)
+      iex> XQLite.bind_null(stmt, 1)
       :ok
 
   """
@@ -254,14 +232,12 @@ defmodule XQLite do
   @doc """
   Resets a prepared statement using [sqlite3_reset()](https://www.sqlite.org/c3ref/reset.html)
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_integer(stmt, _at = 1, _to = 42)
+      iex> XQLite.bind_integer(stmt, 1, 42)
       iex> XQLite.step(stmt)
       iex> :ok = XQLite.reset(stmt)
-      iex> XQLite.bind_text(stmt, _at = 1, _to = "answer")
+      iex> XQLite.bind_text(stmt, 1, "answer")
       iex> XQLite.step(stmt)
       {:row, ["answer"]}
 
@@ -271,8 +247,6 @@ defmodule XQLite do
 
   @doc """
   Releases resources associated with a prepared statement.
-
-  Example:
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
@@ -286,8 +260,6 @@ defmodule XQLite do
   @doc """
   Executes a prepared statement once.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT 1")
       iex> XQLite.step(stmt)
@@ -297,14 +269,12 @@ defmodule XQLite do
   @spec step(stmt) :: {:row, row} | :done
   def step(_stmt), do: :erlang.nif_error(:undef)
 
-  @doc "Same as `step/2` but runs on a regular scheduler."
+  @doc "Same as `step/1` but runs on a regular scheduler."
   @spec unsafe_step(stmt) :: {:row, row} | :done
   def unsafe_step(_stmt), do: :erlang.nif_error(:undef)
 
   @doc """
   Executes a prepared statement `count` times.
-
-  Example:
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "select 1")
@@ -321,7 +291,7 @@ defmodule XQLite do
 
   defp dirty_io_step_nif(_stmt, _count), do: :erlang.nif_error(:undef)
 
-  @doc "Same as `step/3` but runs on a regular scheduler."
+  @doc "Same as `step/2` but runs on a regular scheduler."
   @spec unsafe_step(stmt, non_neg_integer) :: {:rows | :done, [row]}
   def unsafe_step(stmt, count) do
     with {tag, rows} <- step_nif(stmt, count) do
@@ -334,10 +304,14 @@ defmodule XQLite do
   @doc """
   Causes any pending operation to stop at its earliest opportunity.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readonly])
-      iex> stmt = XQLite.prepare(db, "with recursive c(x) as (values(1) union all select x+1 from c where x < 10000000000000) select sum(x) from c")
+      iex> cte = \"""
+      ...> with recursive c(x) as (
+      ...>   values(1) union all
+      ...>   select x+1 from c where x < 10000000000000
+      ...> ) select sum(x) from c
+      ...> \"""
+      iex> stmt = XQLite.prepare(db, cte)
       iex> spawn(fn ->
       ...>   :timer.sleep(10)
       ...>   :ok = XQLite.interrupt(db)
@@ -351,8 +325,6 @@ defmodule XQLite do
 
   @doc """
   Returns all rows from a prepared statement.
-
-  Example:
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT 1")
@@ -370,14 +342,12 @@ defmodule XQLite do
   @doc """
   Bulk-inserts rows into a prepared statement. Must be called inside a transaction.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readwrite])
       iex> XQLite.exec(db, "CREATE TABLE users (name TEXT)")
       iex> insert = XQLite.prepare(db, "INSERT INTO users (name) VALUES (?)")
       iex> XQLite.exec(db, "BEGIN IMMEDIATE")
       iex> try do
-      ...>   :done = XQLite.insert_all(insert, _types = [:text], _rows = [["Alice"], [nil], ["Bob"]])
+      ...>   XQLite.insert_all(insert, [:text], [["Alice"], [nil], ["Bob"]])
       ...> rescue
       ...>   e ->
       ...>     XQLite.exec(db, "ROLLBACK")
@@ -409,8 +379,6 @@ defmodule XQLite do
   @doc """
   Returns the number of rows changed by the most recent statement.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readwrite])
       iex> XQLite.exec(db, "CREATE TABLE users (name TEXT)")
       iex> XQLite.exec(db, "INSERT INTO users (name) VALUES ('Alice'), ('Bob')")
@@ -423,8 +391,6 @@ defmodule XQLite do
 
   @doc """
   Returns the total number of rows changed since the database connection was open.
-
-  Example:
 
       iex> db = XQLite.open(":memory:", [:readwrite])
       iex> XQLite.exec(db, "CREATE TABLE users (name TEXT)")
@@ -440,11 +406,9 @@ defmodule XQLite do
   @doc """
   Resets all bindings on a prepared statement.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT ?")
-      iex> XQLite.bind_integer(stmt, _at = 1, _to = 42)
+      iex> XQLite.bind_integer(stmt, 1, 42)
       iex> :ok = XQLite.clear_bindings(stmt)
       iex> XQLite.step(stmt)
       {:row, [nil]}
@@ -455,8 +419,6 @@ defmodule XQLite do
 
   @doc """
   Enables or disables extension loading.
-
-  Example:
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> XQLite.enable_load_extension(db, true)
@@ -477,11 +439,9 @@ defmodule XQLite do
   @doc """
   Returns the SQL text used to create a prepared statement.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "select ?")
-      iex> XQLite.bind_integer(stmt, _at = 1, _to = 42)
+      iex> XQLite.bind_integer(stmt, 1, 42)
       iex> XQLite.sql(stmt)
       "select ?"
 
@@ -492,11 +452,9 @@ defmodule XQLite do
   @doc """
   Returns the SQL text used to create a prepared statement with bound parameters expanded.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "select ?")
-      iex> XQLite.bind_integer(stmt, _at = 1, _to = 42)
+      iex> XQLite.bind_integer(stmt, 1, 42)
       iex> XQLite.expanded_sql(stmt)
       "select 42"
 
@@ -506,8 +464,6 @@ defmodule XQLite do
 
   @doc """
   Tests for auto-commit mode.
-
-  Example:
 
       iex> db = XQLite.open(":memory:", [:readwrite])
       iex> XQLite.get_autocommit(db)
@@ -525,8 +481,6 @@ defmodule XQLite do
   @doc """
   Returns the rowid of the most recent successful INSERT.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readwrite])
       iex> XQLite.exec(db, "CREATE TABLE users (name TEXT)")
       iex> XQLite.exec(db, "INSERT INTO users (name) VALUES ('Alice'), ('Bob')")
@@ -539,8 +493,6 @@ defmodule XQLite do
 
   @doc """
   Returns the number of bytes of memory currently outstanding (malloced but not freed).
-
-  Example:
 
       iex> XQLite.memory_used()
       0
@@ -557,8 +509,6 @@ defmodule XQLite do
   @doc """
   Returns number of columns in a result set.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT 1, 2, 3")
       iex> XQLite.column_count(stmt)
@@ -570,8 +520,6 @@ defmodule XQLite do
 
   @doc """
   Returns the name of a column in a result set.
-
-  Example:
 
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT 1 AS one, 2 AS two, 3 AS three")
@@ -585,8 +533,6 @@ defmodule XQLite do
   @doc """
   Returns the names of all columns in a result set.
 
-  Example:
-
       iex> db = XQLite.open(":memory:", [:readonly])
       iex> stmt = XQLite.prepare(db, "SELECT 1 AS one, 2 AS two, 3 AS three")
       iex> XQLite.column_names(stmt)
@@ -598,8 +544,6 @@ defmodule XQLite do
 
   @doc """
   Executes an SQL statement.
-
-  Example:
 
       iex> db = XQLite.open(":memory:", [:readwrite])
       iex> XQLite.exec(db, "CREATE TABLE users (name TEXT)")
