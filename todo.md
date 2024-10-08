@@ -3,6 +3,7 @@
 - improve error handling
 - maybe start tx automatically in XQlite.insert_all
 - expose more C api (release memory, load_extensions, normalized sql, wal, stats (scan status), etc.)
-- on close, use sqlite3_next_stmt to finalize all prepared statements?
+- on close, use sqlite3_next_stmt to finalize all prepared statements? needs to avoid double free, e.g. by extending stmt_t with extra info
 - check what happens when insert_all's prepared statement is executed after schema change
 - check what happens interrupt is called between steps in fetch all
+- rollback if raises during tx? probably not, seems like an app concern, can be done in xqlite_writer / xqlite_ecto
