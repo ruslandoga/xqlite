@@ -20,10 +20,31 @@ defmodule XQLiteTest do
     end
   end
 
+  describe "db destructor" do
+    test "closes db on gc" do
+      {pid, monitor} =
+        :proc_lib.spawn_opt(fn -> XQLite.open(":memory:", [:readonly]) end, [:monitor])
+
+      assert_receive {:DOWN, ^monitor, :process, ^pid, :normal}
+      assert XQLite.memory_used() == 0
+    end
+  end
+
   describe "close/1" do
-    test "closes a database" do
-      db = XQLite.open(":memory:", [:readonly])
+    setup do
+      {:ok, db: XQLite.open(":memory:", [:readonly])}
+    end
+
+    test "closes a database", %{db: db} do
       assert :ok = XQLite.close(db)
+    end
+
+    test "doesn't close if database is still in use", %{db: db} do
+      stmt = XQLite.prepare(db, "select 1 + 1")
+      assert :ok = XQLite.close(db)
+      assert XQLite.memory_used() > 0
+      assert :ok = XQLite.finalize(stmt)
+      assert XQLite.memory_used() == 0
     end
   end
 
@@ -35,6 +56,24 @@ defmodule XQLiteTest do
     test "prepares a statement", %{db: db} do
       stmt = XQLite.prepare(db, "select 1 + 1, '🤷‍♂️'", [:persistent])
       assert {:row, [2, "🤷‍♂️"]} = XQLite.unsafe_step(stmt)
+    end
+  end
+
+  describe "stmt destructor" do
+    test "finalizes stmt on gc" do
+      {pid, monitor} =
+        :proc_lib.spawn_opt(
+          fn ->
+            db = XQLite.open(":memory:", [:readonly])
+            XQLite.prepare(db, "select 1")
+            XQLite.prepare(db, "select 2")
+            XQLite.prepare(db, "select 3")
+          end,
+          [:monitor]
+        )
+
+      assert_receive {:DOWN, ^monitor, :process, ^pid, :normal}
+      assert XQLite.memory_used() == 0
     end
   end
 
