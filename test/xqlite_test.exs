@@ -16,14 +16,53 @@ defmodule XQLiteTest do
 
     test "opens an in-memory database" do
       db = XQLite.open(":memory:", [:readonly])
+
       assert prepare_fetch_all(db, "pragma database_list") == [[0, "main", ""]]
     end
   end
 
+  describe "db destructor" do
+    test "closes db on gc" do
+      {pid, monitor} =
+        :proc_lib.spawn_opt(fn -> XQLite.open(":memory:", [:readonly]) end, [:monitor])
+
+      assert_receive {:DOWN, ^monitor, :process, ^pid, :normal}
+      assert XQLite.memory_used() == 0
+    end
+  end
+
   describe "close/1" do
-    test "closes a database" do
-      db = XQLite.open(":memory:", [:readonly])
+    setup do
+      {:ok, db: XQLite.open(":memory:", [:readonly])}
+    end
+
+    test "closes a database", %{db: db} do
       assert :ok = XQLite.close(db)
+    end
+
+    test "raises if database is still in use", %{db: db} do
+      stmt = XQLite.prepare(db, "select 1 + 1")
+      assert_raise XQLite.Error, "database is locked", fn -> XQLite.close(db) end
+      :ok = XQLite.finalize(stmt)
+      assert :ok = XQLite.close(db)
+    end
+  end
+
+  describe "close_v2/1" do
+    setup do
+      {:ok, db: XQLite.open(":memory:", [:readonly])}
+    end
+
+    test "closes a database", %{db: db} do
+      assert :ok = XQLite.close_v2(db)
+    end
+
+    test "doesn't close if database is still in use", %{db: db} do
+      stmt = XQLite.prepare(db, "select 1 + 1")
+      assert :ok = XQLite.close_v2(db)
+      assert XQLite.memory_used() > 0
+      assert :ok = XQLite.finalize(stmt)
+      assert XQLite.memory_used() == 0
     end
   end
 
@@ -34,7 +73,26 @@ defmodule XQLiteTest do
 
     test "prepares a statement", %{db: db} do
       stmt = XQLite.prepare(db, "select 1 + 1, '🤷‍♂️'", [:persistent])
+
       assert {:row, [2, "🤷‍♂️"]} = XQLite.unsafe_step(stmt)
+    end
+  end
+
+  describe "stmt destructor" do
+    test "finalizes stmt on gc" do
+      {pid, monitor} =
+        :proc_lib.spawn_opt(
+          fn ->
+            db = XQLite.open(":memory:", [:readonly])
+            XQLite.prepare(db, "select 1")
+            XQLite.prepare(db, "select 2")
+            XQLite.prepare(db, "select 3")
+          end,
+          [:monitor]
+        )
+
+      assert_receive {:DOWN, ^monitor, :process, ^pid, :normal}
+      assert XQLite.memory_used() == 0
     end
   end
 
@@ -53,6 +111,7 @@ defmodule XQLiteTest do
     setup do
       db = XQLite.open(":memory:", [:readonly])
       stmt = XQLite.prepare(db, "select ?, ?, ?, ?, ?")
+
       {:ok, db: db, stmt: stmt}
     end
 
@@ -183,6 +242,8 @@ defmodule XQLiteTest do
       XQLite.exec(db, "begin immediate")
       assert :done = XQLite.insert_all(insert, types, rows)
       XQLite.exec(db, "commit")
+
+      # TODO changes64
 
       assert prepare_fetch_all(db, "select rowid, * from test order by rowid") == [
                [1, 1, 0.3, "Alice 🤦‍♀️", <<0>>],

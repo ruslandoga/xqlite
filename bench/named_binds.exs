@@ -1,10 +1,10 @@
-# Commit: 6b72ef2566696b5097b52af11ddc49c5c5e9d55c
-# Date: Mon Oct  7 14:16:50 +07 2024
+# Commit: 753592cd7588e0c3132de5a7766230a077aeb3e6
+# Date: Tue Oct  8 12:30:28 +07 2024
 
 # Name                           ips        average  deviation         median         99th %
-# bind_null                  11.46 M       87.26 ns  ±7117.92%          83 ns          84 ns
-# bind_parameter_index        4.43 M      225.91 ns  ±2121.83%         208 ns         292 ns
-# named bind_null             3.01 M      332.51 ns  ±4532.92%         250 ns         334 ns
+# bind_null                  20.05 M       49.87 ns   ±177.12%          42 ns          84 ns
+# bind_parameter_index        6.58 M      152.01 ns  ±3150.23%         125 ns         209 ns
+# named bind_null             5.90 M      169.58 ns  ±2826.46%         166 ns         250 ns
 
 Benchee.run(
   %{

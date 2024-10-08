@@ -1,5 +1,5 @@
-# Commit: 4ba792923b90bb1daa66671e309348508ba34fd3
-# Date: Fri Oct  4 14:15:11 +07 2024
+# Commit: 753592cd7588e0c3132de5a7766230a077aeb3e6
+# Date: Tue Oct  8 12:28:17 +07 2024
 
 # Operating System: macOS
 # CPU Information: Apple M2
@@ -11,19 +11,19 @@
 
 # ##### With input 10 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all      245.23 K        4.08 μs   ±197.25%           4 μs        5.50 μs
+# fetch_all      245.90 K        4.07 μs   ±145.42%        3.96 μs        5.46 μs
 
 # ##### With input 100 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all       37.06 K       26.99 μs    ±15.49%       27.67 μs       36.08 μs
+# fetch_all       36.74 K       27.21 μs    ±15.49%       27.71 μs       36.13 μs
 
 # ##### With input 1000 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all        4.96 K      201.76 μs     ±5.17%      201.42 μs      232.77 μs
+# fetch_all        4.99 K      200.58 μs     ±5.08%      199.88 μs      226.84 μs
 
 # ##### With input 10000 rows #####
 # Name                ips        average  deviation         median         99th %
-# fetch_all        532.55        1.88 ms     ±4.70%        1.83 ms        2.17 ms
+# fetch_all        542.23        1.84 ms     ±4.16%        1.80 ms        1.99 ms
 
 sql = """
 with recursive cte(i) as (
@@ -45,7 +45,7 @@ Benchee.run(
   before_scenario: fn rows ->
     db = XQLite.open(":memory:", [:readonly, :nomutex])
     stmt = XQLite.prepare(db, sql, [:persistent])
-    XQLite.bind_integer(db, stmt, 1, rows)
+    XQLite.bind_integer(stmt, 1, rows)
     %{db: db, stmt: stmt}
   end,
   after_scenario: fn %{db: db, stmt: stmt} ->
