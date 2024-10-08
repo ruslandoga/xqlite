@@ -205,6 +205,17 @@ defmodule XQLite do
   @spec bind_integer(stmt, non_neg_integer, integer) :: :ok
   def bind_integer(_stmt, _index, _integer), do: :erlang.nif_error(:undef)
 
+  def bind_int(_stmt, _index, _integer), do: :erlang.nif_error(:undef)
+  def bind_int64(_stmt, _index, _integer), do: :erlang.nif_error(:undef)
+
+  def bind_int_or_int64(stmt, index, i) when i < 2_147_483_647 and i > -2_147_483_648 do
+    bind_int(stmt, index, i)
+  end
+
+  def bind_int_or_int64(stmt, index, integer) do
+    bind_int64(stmt, index, integer)
+  end
+
   @doc """
   Binds a float value to a prepared statement.
 
