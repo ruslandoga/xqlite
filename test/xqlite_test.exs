@@ -8,9 +8,7 @@ defmodule XQLiteTest do
     @tag :tmp_dir
     test "creates and opens a database on disk", %{tmp_dir: tmp_dir} do
       path = Path.join(tmp_dir, "test-💽.db")
-
       db = XQLite.open(path, [:readwrite, :create])
-      on_exit(fn -> XQLite.close(db) end)
 
       assert [[0, "main", path]] = prepare_fetch_all(db, "pragma database_list")
       assert Path.basename(path) == "test-💽.db"
@@ -18,7 +16,6 @@ defmodule XQLiteTest do
 
     test "opens an in-memory database" do
       db = XQLite.open(":memory:", [:readonly])
-      on_exit(fn -> XQLite.close(db) end)
       assert prepare_fetch_all(db, "pragma database_list") == [[0, "main", ""]]
     end
   end
@@ -32,23 +29,18 @@ defmodule XQLiteTest do
 
   describe "prepare/2" do
     setup do
-      db = XQLite.open(":memory:", [:readonly])
-      on_exit(fn -> XQLite.close(db) end)
-      {:ok, db: db}
+      {:ok, db: XQLite.open(":memory:", [:readonly])}
     end
 
     test "prepares a statement", %{db: db} do
       stmt = XQLite.prepare(db, "select 1 + 1, '🤷‍♂️'", [:persistent])
-      on_exit(fn -> XQLite.finalize(stmt) end)
       assert {:row, [2, "🤷‍♂️"]} = XQLite.unsafe_step(stmt)
     end
   end
 
   describe "finalize/1" do
     setup do
-      db = XQLite.open(":memory:", [:readonly])
-      on_exit(fn -> XQLite.close(db) end)
-      {:ok, db: db}
+      {:ok, db: XQLite.open(":memory:", [:readonly])}
     end
 
     test "finalizes a statement", %{db: db} do
@@ -60,11 +52,7 @@ defmodule XQLiteTest do
   describe "bind and fetch_all" do
     setup do
       db = XQLite.open(":memory:", [:readonly])
-      on_exit(fn -> XQLite.close(db) end)
-
       stmt = XQLite.prepare(db, "select ?, ?, ?, ?, ?")
-      on_exit(fn -> XQLite.finalize(stmt) end)
-
       {:ok, db: db, stmt: stmt}
     end
 
@@ -75,6 +63,7 @@ defmodule XQLiteTest do
         XQLite.bind_text(stmt, 3, binary)
         XQLite.bind_blob(stmt, 4, binary)
         XQLite.bind_null(stmt, 5)
+
         assert [[^integer, ^float, ^binary, ^binary, nil]] = XQLite.fetch_all(stmt)
       end
     end
@@ -83,11 +72,7 @@ defmodule XQLiteTest do
   describe "bind_integer/4" do
     setup do
       db = XQLite.open(":memory:", [:readonly])
-      on_exit(fn -> XQLite.close(db) end)
-
       stmt = XQLite.prepare(db, "select ?")
-      on_exit(fn -> XQLite.finalize(stmt) end)
-
       {:ok, db: db, stmt: stmt}
     end
 
@@ -100,11 +85,7 @@ defmodule XQLiteTest do
   describe "bind_text/4" do
     setup do
       db = XQLite.open(":memory:", [:readonly])
-      on_exit(fn -> XQLite.close(db) end)
-
       stmt = XQLite.prepare(db, "select ?")
-      on_exit(fn -> XQLite.finalize(stmt) end)
-
       {:ok, db: db, stmt: stmt}
     end
 
@@ -117,7 +98,6 @@ defmodule XQLiteTest do
   describe "step/3" do
     setup do
       db = XQLite.open(":memory:", [:readonly])
-      on_exit(fn -> XQLite.close(db) end)
 
       stmt =
         XQLite.prepare(db, """
@@ -126,8 +106,6 @@ defmodule XQLiteTest do
         )
         select x from cte
         """)
-
-      on_exit(fn -> XQLite.finalize(stmt) end)
 
       {:ok, db: db, stmt: stmt}
     end
@@ -148,7 +126,6 @@ defmodule XQLiteTest do
   describe "fetch_all/2" do
     setup do
       db = XQLite.open(":memory:", [:readonly])
-      on_exit(fn -> XQLite.close(db) end)
 
       stmt =
         XQLite.prepare(db, """
@@ -165,8 +142,6 @@ defmodule XQLiteTest do
           null
         from cte
         """)
-
-      on_exit(fn -> XQLite.finalize(stmt) end)
 
       {:ok, db: db, stmt: stmt}
     end
@@ -189,15 +164,12 @@ defmodule XQLiteTest do
   describe "insert_all/4" do
     setup do
       db = XQLite.open(":memory:", [:readwrite])
-      on_exit(fn -> XQLite.close(db) end)
+      XQLite.exec(db, "create table test(i integer, f real, txt text, bin blob) strict")
       {:ok, db: db}
     end
 
     test "inserts rows", %{db: db} do
-      :done = exec(db, "create table test(i integer, f real, txt text, bin blob) strict")
-
       insert = XQLite.prepare(db, "insert into test(i, f, txt, bin) values(?, ?, ?, ?)")
-      on_exit(fn -> XQLite.finalize(insert) end)
 
       types = [:integer, :float, :text, :blob]
 
@@ -208,9 +180,9 @@ defmodule XQLiteTest do
         [nil, nil, nil, nil]
       ]
 
-      assert :done = exec(db, "begin immediate")
+      XQLite.exec(db, "begin immediate")
       assert :done = XQLite.insert_all(insert, types, rows)
-      assert :done = exec(db, "commit")
+      XQLite.exec(db, "commit")
 
       assert prepare_fetch_all(db, "select rowid, * from test order by rowid") == [
                [1, 1, 0.3, "Alice 🤦‍♀️", <<0>>],
@@ -221,15 +193,7 @@ defmodule XQLiteTest do
     end
   end
 
-  defp exec(db, sql) do
-    stmt = XQLite.prepare(db, sql)
-    on_exit(fn -> XQLite.finalize(stmt) end)
-    XQLite.step(stmt)
-  end
-
   defp prepare_fetch_all(db, sql) do
-    select = XQLite.prepare(db, sql)
-    on_exit(fn -> XQLite.finalize(select) end)
-    XQLite.fetch_all(select)
+    XQLite.fetch_all(XQLite.prepare(db, sql))
   end
 end
