@@ -44,7 +44,7 @@ all: $(PRIV) $(BUILD) $(LIB)
 
 $(BUILD)/%.o: c_src/%.c
 	@echo " CC $(notdir $@)"
-	$(CC) -c $(ERL_CFLAGS) $(CFLAGS) -o $@ $<
+	$(CC) -c $(CFLAGS) -o $@ $<
 
 $(LIB): $(OBJ)
 	@echo " LD $(notdir $@)"
