@@ -1,7 +1,4 @@
-- optimise small ints and maybe use something other than SQLITE_TRANSIENT in binaries (when its safe)
-- optimise make_cell more
-- improve error handling
-- maybe start tx automatically in XQlite.insert_all
+- maybe use something other than SQLITE_TRANSIENT in binaries (when its safe)
 - expose more C api (release memory, load_extensions, normalized sql, wal, stats (scan status), etc.)
 - on close, use sqlite3_next_stmt to finalize all prepared statements?
 - check what happens when insert_all's prepared statement is executed after schema change
