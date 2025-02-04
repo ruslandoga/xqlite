@@ -1,1 +1,1 @@
-Separate namespace for https://github.com/elixir-sqlite/exqlite experiments.
+Just a bunch of SQLite NIFs.

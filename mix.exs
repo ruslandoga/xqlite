@@ -1,14 +1,30 @@
 defmodule XQLite.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+  @repo_url "https://github.com/ruslandoga/xqlite"
+
   def project do
     [
       app: :xqlite,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.17",
       compilers: [:elixir_make | Mix.compilers()],
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      # hex
+      package: [
+        licenses: ["MIT"],
+        links: %{"GitHub" => @repo_url}
+      ],
+      description: "SQLite NIFs",
+      # docs
+      name: "XQLite",
+      docs: [
+        main: "XQLite",
+        source_url: @repo_url,
+        source_ref: "v#{@version}"
+      ]
     ]
   end
 
