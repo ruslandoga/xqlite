@@ -805,45 +805,45 @@ static ErlNifFunc nif_funcs[] = {
     {"finalize", 1, xqlite_finalize, ERL_NIF_DIRTY_JOB_CPU_BOUND},
     {"reset", 1, xqlite_reset, ERL_NIF_DIRTY_JOB_CPU_BOUND},
 
-    {"bind_parameter_count", 1, xqlite_bind_parameter_count},
-    {"bind_parameter_index_nif", 2, xqlite_bind_parameter_index},
-    {"bind_parameter_name", 2, xqlite_bind_parameter_name},
-    {"bind_text_nif", 3, xqlite_bind_text},
-    {"bind_blob_nif", 3, xqlite_bind_blob},
-    {"bind_integer_nif", 3, xqlite_bind_integer},
-    {"bind_float_nif", 3, xqlite_bind_float},
-    {"bind_null_nif", 2, xqlite_bind_null},
-    {"clear_bindings_nif", 1, xqlite_clear_bindings},
+    {"bind_parameter_count", 1, xqlite_bind_parameter_count, 0},
+    {"bind_parameter_index_nif", 2, xqlite_bind_parameter_index, 0},
+    {"bind_parameter_name", 2, xqlite_bind_parameter_name, 0},
+    {"bind_text_nif", 3, xqlite_bind_text, 0},
+    {"bind_blob_nif", 3, xqlite_bind_blob, 0},
+    {"bind_integer_nif", 3, xqlite_bind_integer, 0},
+    {"bind_float_nif", 3, xqlite_bind_float, 0},
+    {"bind_null_nif", 2, xqlite_bind_null, 0},
+    {"clear_bindings_nif", 1, xqlite_clear_bindings, 0},
 
     {"step_nif", 1, xqlite_step, ERL_NIF_DIRTY_JOB_IO_BOUND},
-    {"unsafe_step_nif", 1, xqlite_step},
+    {"unsafe_step_nif", 1, xqlite_step, 0},
     {"dirty_io_step_nif", 2, xqlite_multi_step, ERL_NIF_DIRTY_JOB_IO_BOUND},
-    {"step_nif", 2, xqlite_multi_step},
+    {"step_nif", 2, xqlite_multi_step, 0},
     {"exec_nif", 2, xqlite_exec, ERL_NIF_DIRTY_JOB_IO_BOUND},
 
-    {"get_autocommit", 1, xqlite_get_autocommit},
+    {"get_autocommit", 1, xqlite_get_autocommit, 0},
 
-    {"interrupt", 1, xqlite_interrupt},
+    {"interrupt", 1, xqlite_interrupt, 0},
 
     {"dirty_io_fetch_all_nif", 1, xqlite_fetch_all, ERL_NIF_DIRTY_JOB_IO_BOUND},
     {"dirty_io_insert_all_nif", 3, xqlite_insert_all, ERL_NIF_DIRTY_JOB_IO_BOUND},
 
-    {"column_count", 1, xqlite_column_count},
-    {"column_name", 2, xqlite_column_name},
-    {"column_names", 1, xqlite_column_names},
+    {"column_count", 1, xqlite_column_count, 0},
+    {"column_name", 2, xqlite_column_name, 0},
+    {"column_names", 1, xqlite_column_names, 0},
 
-    {"changes", 1, xqlite_changes64},
-    {"total_changes", 1, xqlite_total_changes64},
-    {"last_insert_rowid", 1, xqlite_last_insert_rowid},
+    {"changes", 1, xqlite_changes64, 0},
+    {"total_changes", 1, xqlite_total_changes64, 0},
+    {"last_insert_rowid", 1, xqlite_last_insert_rowid, 0},
 
-    {"enable_load_extension_nif", 2, xqlite_enable_load_extension},
+    {"enable_load_extension_nif", 2, xqlite_enable_load_extension, 0},
 
-    {"sql", 1, xqlite_sql},
-    {"expanded_sql", 1, xqlite_expanded_sql},
+    {"sql", 1, xqlite_sql, 0},
+    {"expanded_sql", 1, xqlite_expanded_sql, 0},
 
-    {"memory_used", 0, xqlite_memory_used},
-    {"errstr", 1, xqlite_errstr},
-    {"errmsg", 1, xqlite_errmsg},
+    {"memory_used", 0, xqlite_memory_used, 0},
+    {"errstr", 1, xqlite_errstr, 0},
+    {"errmsg", 1, xqlite_errmsg, 0},
 };
 
 ERL_NIF_INIT(Elixir.XQLite, nif_funcs, on_load, NULL, NULL, NULL)
