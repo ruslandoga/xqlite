@@ -672,7 +672,7 @@ defmodule XQLite do
   @doc false
   def load_nif do
     :code.priv_dir(:xqlite)
-    |> :filename.join(~c"xqlite_nif")
+    |> :filename.join(~c"xqlite")
     |> :erlang.load_nif(0)
   end
 end

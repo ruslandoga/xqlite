@@ -1,10 +1,10 @@
-SRC = c_src/sqlite3.c c_src/xqlite_nif.c
+SRC = c_src/sqlite3.c c_src/xqlite.c
 CFLAGS = -Ic_src -I"$(ERTS_INCLUDE_DIR)"
 
 KERNEL_NAME := $(shell uname -s)
 PRIV = $(MIX_APP_PATH)/priv
 BUILD  = $(MIX_APP_PATH)/obj
-LIB = $(PRIV)/xqlite_nif.so
+LIB = $(PRIV)/xqlite.so
 OBJ = $(SRC:c_src/%.c=$(BUILD)/%.o)
 
 ifeq ($(MIX_ENV), dev)
