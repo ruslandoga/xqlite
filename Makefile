@@ -10,9 +10,6 @@ CFLAGS = -Ic_src -I"$(ERTS_INCLUDE_DIR)" -fPIC -pedantic -Wall -Wextra -Werror \
 	-Wno-unused-parameter -Wno-unused-variable -Wno-unused-function -Wno-unused-but-set-variable \
 	-Wno-unused-value -Wno-unused-label -Wno-unused-result -Wno-unused-local-typedefs
 
-SRC = c_src/sqlite3.c c_src/xqlite.c
-OBJ = $(SRC:c_src/%.c=$(BUILD)/%.o)
-
 ifeq ($(MIX_ENV), dev)
 	CFLAGS += -g
 else ifeq ($(MIX_ENV), test)
