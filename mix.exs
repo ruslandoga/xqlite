@@ -12,6 +12,11 @@ defmodule XQLite.MixProject do
       compilers: [:elixir_make | Mix.compilers()],
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      # dialyzer
+      dialyzer: [
+        plt_local_path: "plts",
+        plt_core_path: "plts"
+      ],
       # hex
       package: [
         licenses: ["MIT"],
@@ -37,7 +42,8 @@ defmodule XQLite.MixProject do
       {:benchee, "~> 1.3", only: :bench},
       {:elixir_make, "~> 0.8", runtime: false},
       {:stream_data, "~> 1.1", only: :test},
-      {:ex_doc, "~> 0.34", only: :docs}
+      {:ex_doc, "~> 0.34", only: :docs},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false}
     ]
   end
 end
